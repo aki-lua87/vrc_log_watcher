@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -40,7 +42,19 @@ type HttpRequestModel struct {
 	Title string `json:"title"`
 }
 
-type XSOverrayModel struct {
+type XSOverlayModel struct {
+	// https://xsoverlay.vercel.app/Developer/API/legacy_udp/notifications
+	MessageType   string  `json:"messageType"`
+	Title         string  `json:"title"`
+	Content       string  `json:"content"`
+	Height        float32 `json:"height"`
+	SourceApp     string  `json:"sourceApp"`
+	Timeout       int     `json:"timeout"`
+	Volume        float32 `json:"volume"`
+	AudioPath     string  `json:"audioPath"`
+	UseBase64Icon bool    `json:"useBase64Icon"`
+	Icon          string  `json:"icon"`
+	Opacity       float32 `json:"opacity"`
 }
 
 type LogOutputModel struct {
@@ -221,10 +235,12 @@ func (a *App) WatchFile() {
 }
 
 var lastOffset int64
+var isInitial bool = true
 var readFileName string
 
 func (a *App) ResetOffset() {
 	lastOffset = 0
+	isInitial = true
 }
 
 func (a *App) ReadFile(path string) {
@@ -242,6 +258,9 @@ func (a *App) ReadFile(path string) {
 	}
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
+		if isInitial {
+			continue
+		}
 		a.evaluateLine(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
@@ -252,6 +271,7 @@ func (a *App) ReadFile(path string) {
 		log.Fatal(err)
 	}
 	log.Default().Println("[DEBUG] [LOG] newOffset: ", lastOffset)
+	isInitial = false
 }
 
 // 行の評価
@@ -260,16 +280,23 @@ func (a *App) evaluateLine(line string) {
 	for _, setting := range a.SaveData.Settings {
 		if setting.RegExp != "" {
 			pattern := regexp.MustCompile(setting.RegExp)
-			matches := pattern.FindString(line)
-			if matches != "" {
-				a.OutputLog(setting.Title + " : " + matches)
+			// matches := pattern.FindString(line)
+			matches := pattern.FindStringSubmatch(line)
+			text := ""
+			if len(matches) > 1 {
+				text = strings.Join(matches[1:], "")
+			}
+			if text != "" {
+				a.OutputLog(setting.Title + " : " + text)
 				// setting.Type によって処理を分岐
 				if setting.Type == "Web Request" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "Web Request:"+matches)
-					message := a.HttpPost(matches, setting.Title, setting.URL)
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "Web Request:"+text)
+					message := a.postHttpRequest(text, setting.Title, setting.URL)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				} else if setting.Type == "xs" {
-					// a.XSOverray(matches)
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "XSOverlay Notification:"+text)
+					message := a.postXSOverlay(text, setting.Title)
+					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				} else if setting.Type == "log" {
 					// a.LogOutput(matches)
 				}
@@ -278,7 +305,7 @@ func (a *App) evaluateLine(line string) {
 	}
 }
 
-func (a *App) HttpPost(eventString string, title string, url string) string {
+func (a *App) postHttpRequest(eventString string, title string, url string) string {
 	if url == "" {
 		return "URL is empty"
 	}
@@ -292,13 +319,38 @@ func (a *App) HttpPost(eventString string, title string, url string) string {
 	data_json, _ := json.Marshal(data)
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(data_json))
 	if err != nil {
-		log.Fatal(err)
+		return err.Error()
 	}
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		log.Fatal(err)
+		return err.Error()
 	}
 	log.Default().Println(string(body))
+	return "OK"
+}
+
+func (a *App) postXSOverlay(eventString string, title string) string {
+	// XSOverlayへ通知の送信
+	data := new(XSOverlayModel)
+	data.Title = title
+	data.Content = eventString
+	data_json, _ := json.Marshal(data)
+
+	url := "127.0.0.1"
+	port := "42069"
+
+	// WebSocketを使って通知を送信
+	ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port, nil)
+	if err != nil {
+		// log.Fatal(err)
+		return err.Error()
+	}
+	defer ws.Close()
+	err = ws.WriteMessage(websocket.TextMessage, data_json)
+	if err != nil {
+		// log.Fatal(err)
+		return err.Error()
+	}
 	return "OK"
 }

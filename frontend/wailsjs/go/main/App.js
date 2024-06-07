@@ -6,10 +6,6 @@ export function GetNewestFileName(arg1) {
   return window['go']['main']['App']['GetNewestFileName'](arg1);
 }
 
-export function HttpPost(arg1, arg2, arg3) {
-  return window['go']['main']['App']['HttpPost'](arg1, arg2, arg3);
-}
-
 export function LoadSetting() {
   return window['go']['main']['App']['LoadSetting']();
 }

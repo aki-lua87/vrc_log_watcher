@@ -4,8 +4,6 @@ import {main} from '../models';
 
 export function GetNewestFileName(arg1:string):Promise<string>;
 
-export function HttpPost(arg1:string,arg2:string,arg3:string):Promise<string>;
-
 export function LoadSetting():Promise<main.SaveData>;
 
 export function OpenFolderSelectWindow():Promise<string>;
