@@ -10,11 +10,9 @@ export function OpenFolderSelectWindow():Promise<string>;
 
 export function OutputLog(arg1:string):Promise<void>;
 
-export function ReadFile(arg1:string):Promise<void>;
+export function ReadFile():Promise<void>;
 
 export function ResetOffset():Promise<void>;
-
-export function SetFileName(arg1:string):Promise<void>;
 
 export function UpdateSetting(arg1:Array<main.Setting>):Promise<void>;
 

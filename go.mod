@@ -5,7 +5,6 @@ go 1.21
 toolchain go1.22.2
 
 require (
-	github.com/fsnotify/fsnotify v1.4.9
 	github.com/gorilla/websocket v1.5.1
 	github.com/wailsapp/wails/v2 v2.8.1
 )

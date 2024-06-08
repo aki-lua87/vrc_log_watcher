@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/gorilla/websocket"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -95,16 +94,15 @@ func (a *App) OutputLog(logstring string) {
 	log.Default().Println("[DEBUG] [LOG] OutputLog:" + logstring)
 }
 
-func (a *App) SetFileName(fileName string) {
-	log.Default().Println("[DEBUG] [LOG] SetFileName:" + fileName)
-	if fileName == a.targetFileName {
-		log.Default().Println("[DEBUG] [LOG] SetFileName: 同じファイル名")
-		return
-	}
-	a.targetFileName = fileName
-	// setIntervalごとにファイルの内容も確認
-	a.ReadFile(a.SaveData.LogPath + "\\" + a.targetFileName)
-}
+// func (a *App) SetFileName(fileName string) {
+// 	log.Default().Println("[DEBUG] [LOG] SetFileName:" + fileName)
+// 	if fileName == a.targetFileName {
+// 		log.Default().Println("[DEBUG] [LOG] SetFileName: 同じファイル名")
+// 		return
+// 	}
+// 	a.targetFileName = fileName
+// 	a.ReadFile()
+// }
 
 func (a *App) LoadSetting() SaveData {
 	log.Default().Println("[DEBUG] [LOG] LoadSetting")
@@ -187,13 +185,13 @@ func (a *App) GetNewestFileName(path string) string {
 		if !entry.IsDir() {
 			info, err := entry.Info()
 			if err != nil {
-				runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
+				runtime.EventsEmit(a.ctx, "commonLogOutput", "ERROR:"+err.Error())
 			}
 			// 拡張子が.txtのファイルのみを対象とする
 			if filepath.Ext(entry.Name()) != ".txt" {
 				continue
 			}
-			if info.IsDir() || info.Size() == 0 {
+			if info.IsDir() {
 				continue
 			}
 			if info.ModTime().After(newestTime) {
@@ -208,9 +206,9 @@ func (a *App) GetNewestFileName(path string) string {
 	if newestFile != nil {
 		log.Default().Println("[DEBUG] [LOG] 監視対象を変更します")
 		a.targetFileName = newestFile.Name()
-		a.ResetOffset()                            // オフセット削除
-		a.ReadFile(path + "\\" + a.targetFileName) // 初回内容読み取り
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "Target Log File Name:"+a.targetFileName)
+		a.ResetOffset() // オフセット削除
+		a.ReadFile()    // 初回内容読み取り
+		runtime.EventsEmit(a.ctx, "commonLogOutput", "New target log file name:"+a.targetFileName)
 		return newestFile.Name() // Viewへ反映
 	}
 	return "対象のファイルが見つかりませんでした"
@@ -218,79 +216,98 @@ func (a *App) GetNewestFileName(path string) string {
 
 // fsnotifyでの ファイルの監視を開始する
 func (a *App) WatchFile() {
-	log.Default().Println("[DEBUG] [LOG] Start watching file")
-	lastOffset = 0
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer watcher.Close()
+	// 問題があったのでコメントアウト: 見かけ上の更新がされないので発火しない
+	// log.Default().Println("[DEBUG] [LOG] Start watching file")
+	// lastOffset = 0
+	// watcher, err := fsnotify.NewWatcher()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer watcher.Close()
 
-	done := make(chan bool)
-	go func() {
-		for {
-			select {
-			case event, ok := <-watcher.Events:
-				if !ok {
-					return
-				}
-				fullpath := a.SaveData.LogPath + "\\" + a.targetFileName
-				if event.Name == fullpath {
-					a.ReadFile(fullpath)
-				}
-			case err, ok := <-watcher.Errors:
-				if !ok {
-					return
-				}
-				log.Println("error:", err)
-			}
-		}
-	}()
+	// done := make(chan bool)
+	// go func() {
+	// 	for {
+	// 		select {
+	// 		case event, ok := <-watcher.Events:
+	// 			if !ok {
+	// 				return
+	// 			}
+	// 			fullpath := a.SaveData.LogPath + "\\" + a.targetFileName
+	// 			if event.Name == fullpath {
+	// 				a.ReadFile(fullpath)
+	// 			}
+	// 		case err, ok := <-watcher.Errors:
+	// 			if !ok {
+	// 				return
+	// 			}
+	// 			log.Println("error:", err)
+	// 		}
+	// 	}
+	// }()
 
-	err = watcher.Add(a.SaveData.LogPath)
-	if err != nil {
-		log.Fatal(err)
-	}
-	<-done
+	// err = watcher.Add(a.SaveData.LogPath)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// <-done
 }
 
 var lastOffset int64
-
-// var isInitial bool = true
-// var readFileName string
+var isWatchFileRunning bool
 
 func (a *App) ResetOffset() {
 	runtime.EventsEmit(a.ctx, "commonLogOutput", "Reset And Read New File")
 	lastOffset = 0
-	// isInitial = true
 }
 
-func (a *App) ReadFile(path string) {
-	log.Default().Println("[DEBUG] [LOG] call readFile")
+func (a *App) ReadFile() {
+	if a.targetFileName == "" {
+		log.Default().Println("[DEBUG] [LOG] No FileName")
+		return
+	}
+	if a.SaveData.LogPath == "" {
+		log.Default().Println("[DEBUG] [LOG] No LogPath")
+		return
+	}
+	if isWatchFileRunning {
+		log.Default().Println("[DEBUG] [LOG] Watching now")
+		return
+	}
+	isWatchFileRunning = true
+	path := a.SaveData.LogPath + "\\" + a.targetFileName
+	log.Default().Println("[DEBUG] [LOG] call readFile: ", path)
 	log.Default().Println("[DEBUG] [LOG] lastOffset: ", lastOffset)
 	file, err := os.Open(path)
 	if err != nil {
-		log.Fatal(err)
+		log.Default().Println("[ERROR] [LOG] ", err.Error())
+		isWatchFileRunning = false
+		return
 	}
 	defer file.Close()
-	// Seek to the last offset
 	_, err = file.Seek(lastOffset, 0)
 	if err != nil {
-		log.Fatal(err)
+		log.Default().Println("[ERROR] [LOG] ", err.Error())
+		isWatchFileRunning = false
+		return
 	}
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		a.evaluateLine(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
-		log.Fatal(err)
+		log.Default().Println("[ERROR] [LOG] ", err.Error())
+		isWatchFileRunning = false
+		return
 	}
 	lastOffset, err = file.Seek(0, io.SeekCurrent)
 	if err != nil {
-		log.Fatal(err)
+		log.Default().Println("[ERROR] [LOG] ", err.Error())
+		isWatchFileRunning = false
+		return
 	}
+	isWatchFileRunning = false
 	log.Default().Println("[DEBUG] [LOG] newOffset: ", lastOffset)
-	// isInitial = false
 }
 
 // 行の評価
@@ -308,7 +325,7 @@ func (a *App) evaluateLine(line string) {
 			if text != "" {
 				// オフセットが0の場合は初回読み込みと判断してスキップ
 				if lastOffset == 0 {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "+Offset 0")
+					// runtime.EventsEmit(a.ctx, "commonLogOutput", "+Offset 0")
 					continue
 				}
 				a.OutputLog(setting.Title + " : " + text)

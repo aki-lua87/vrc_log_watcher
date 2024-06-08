@@ -2,11 +2,11 @@
   import logo from "./assets/images/logo-universal.png";
   import { OpenFolderSelectWindow } from "../wailsjs/go/main/App.js";
   import { GetNewestFileName } from "../wailsjs/go/main/App.js";
-  import { SetFileName } from "../wailsjs/go/main/App.js";
   import { WatchFile } from "../wailsjs/go/main/App.js";
   import { ResetOffset } from "../wailsjs/go/main/App.js";
   import { UpdateSetting } from "../wailsjs/go/main/App.js";
   import { LoadSetting } from "../wailsjs/go/main/App.js";
+  import { ReadFile } from "../wailsjs/go/main/App.js";
 
   import { onMount } from "svelte";
   import Header from "./Header.svelte";
@@ -47,8 +47,10 @@
       clearInterval(intervalId);
     }
     await getLogFiles();
-    intervalId = setInterval(getLogFiles, 1 * 15 * 1000);
-    WatchFile().then((result) => console.log(result));
+    intervalId = setInterval(getLogFiles, 1 * (60 / 4) * 1000);
+    setInterval(watchFile, 1 * 1 * 1000);
+    // fsnotifyでの ファイルの監視がなんか有効ではなさそう1
+    // WatchFile().then((result) => console.log(result));
   }
 
   async function getLogFolderPath() {
@@ -72,6 +74,11 @@
     // await SetFileName(logFileName).then((result) => console.log(result));
   }
 
+  async function watchFile() {
+    // ここをSetIntervalで無理やり監視する
+    ReadFile().then((result) => {}); // awaitいらない？
+  }
+
   async function addContent() {
     // uuid作成
     const uuid = () =>
@@ -93,17 +100,17 @@
     selectedContent = contents.find((content) => content.id === newContent.id);
     logs = [
       ...logs,
-      `${new Date().toLocaleTimeString()} addContent: ${newContent.id} ${newContent.title}`,
+      `${new Date().toLocaleTimeString()} 設定を追加しました: ${newContent.id} ${newContent.title}`,
     ];
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
   function selectContent(customEvent: CustomEvent<main.Setting>) {
     let selectContent = customEvent.detail;
-    logs = [
-      ...logs,
-      `${new Date().toLocaleTimeString()} selectContent: ${selectContent.id} ${selectContent.title}`,
-    ];
+    // logs = [
+    //   ...logs,
+    //   `${new Date().toLocaleTimeString()} selectContent: ${selectContent.id} ${selectContent.title}`,
+    // ];
     selectedContent = contents.find(
       (content) => content.id === selectContent.id,
     );
@@ -116,10 +123,10 @@
     contents = contents.map((content) =>
       content.id === updateContent.id ? updateContent : content,
     );
-    logs = [
-      ...logs,
-      `${new Date().toLocaleTimeString()} updateContent: ${updateContent.id} ${updateContent.title}`,
-    ];
+    // logs = [
+    //   ...logs,
+    //   `${new Date().toLocaleTimeString()} updateContent: ${updateContent.id} ${updateContent.title}`,
+    // ];
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
