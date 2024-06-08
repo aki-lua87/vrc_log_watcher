@@ -14,9 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/websocket"
-
 	"github.com/fsnotify/fsnotify"
+	"github.com/gorilla/websocket"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -42,19 +41,32 @@ type HttpRequestModel struct {
 	Title string `json:"title"`
 }
 
-type XSOverlayModel struct {
-	// https://xsoverlay.vercel.app/Developer/API/legacy_udp/notifications
-	MessageType   string  `json:"messageType"`
-	Title         string  `json:"title"`
-	Content       string  `json:"content"`
-	Height        float32 `json:"height"`
-	SourceApp     string  `json:"sourceApp"`
-	Timeout       int     `json:"timeout"`
-	Volume        float32 `json:"volume"`
-	AudioPath     string  `json:"audioPath"`
-	UseBase64Icon bool    `json:"useBase64Icon"`
-	Icon          string  `json:"icon"`
-	Opacity       float32 `json:"opacity"`
+type XSOApiObject struct {
+	Sender   string `json:"sender"`
+	Target   string `json:"target"`
+	Command  string `json:"command"`
+	JsonData string `json:"jsonData"`
+	RawData  string `json:"rawData"`
+	// Timeout       int     `json:"timeout"`
+	// Volume        float32 `json:"volume"`
+	// AudioPath     string  `json:"audioPath"`
+	// UseBase64Icon bool    `json:"useBase64Icon"`
+	// Icon          string  `json:"icon"`
+	// Opacity       float32 `json:"opacity"`
+}
+
+type XSONotificationObject struct {
+	Type    int    `json:"type"`
+	Title   string `json:"title"`
+	Content string `json:"content"`
+	// Height        float32 `json:"height"`
+	// SourceApp     string  `json:"sourceApp"`
+	// Timeout       int     `json:"timeout"`
+	// Volume        float32 `json:"volume"`
+	// AudioPath     string  `json:"audioPath"`
+	// UseBase64Icon bool    `json:"useBase64Icon"`
+	// Icon          string  `json:"icon"`
+	// Opacity       float32 `json:"opacity"`
 }
 
 type LogOutputModel struct {
@@ -85,6 +97,10 @@ func (a *App) OutputLog(logstring string) {
 
 func (a *App) SetFileName(fileName string) {
 	log.Default().Println("[DEBUG] [LOG] SetFileName:" + fileName)
+	if fileName == a.targetFileName {
+		log.Default().Println("[DEBUG] [LOG] SetFileName: 同じファイル名")
+		return
+	}
 	a.targetFileName = fileName
 	// setIntervalごとにファイルの内容も確認
 	a.ReadFile(a.SaveData.LogPath + "\\" + a.targetFileName)
@@ -107,7 +123,7 @@ func (a *App) LoadSetting() SaveData {
 		runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
 	}
 	log.Default().Println(saveData)
-	runtime.EventsEmit(a.ctx, "commonLogOutput", "Target Log:"+saveData.LogPath)
+	runtime.EventsEmit(a.ctx, "commonLogOutput", "Target Log Folder:"+saveData.LogPath)
 	// a.SaveData.LogPath = saveData.LogPath
 	a.SaveData = saveData
 	return saveData
@@ -175,25 +191,29 @@ func (a *App) GetNewestFileName(path string) string {
 			}
 			// 拡張子が.txtのファイルのみを対象とする
 			if filepath.Ext(entry.Name()) != ".txt" {
-				log.Default().Println("[DEBUG] [LOG] is not text: " + entry.Name())
 				continue
 			}
 			if info.IsDir() || info.Size() == 0 {
-				log.Default().Println("[DEBUG] [LOG] is Directory or empty: " + entry.Name())
 				continue
 			}
 			if info.ModTime().After(newestTime) {
-				// log.Default().Println("[DEBUG] [LOG] 最新のファイルに更新があります=> " + entry.Name() + info.ModTime().String())
 				newestFile = entry
 				newestTime = info.ModTime()
 			}
 		}
 	}
-	if newestFile != nil {
-		a.targetFileName = newestFile.Name()
-		return newestFile.Name()
+	if newestFile.Name() == a.targetFileName {
+		return a.targetFileName // Viewへ反映(別に更新しなくてもいいけど)
 	}
-	return ""
+	if newestFile != nil {
+		log.Default().Println("[DEBUG] [LOG] 監視対象を変更します")
+		a.targetFileName = newestFile.Name()
+		a.ResetOffset()                            // オフセット削除
+		a.ReadFile(path + "\\" + a.targetFileName) // 初回内容読み取り
+		runtime.EventsEmit(a.ctx, "commonLogOutput", "Target Log File Name:"+a.targetFileName)
+		return newestFile.Name() // Viewへ反映
+	}
+	return "対象のファイルが見つかりませんでした"
 }
 
 // fsnotifyでの ファイルの監視を開始する
@@ -235,12 +255,14 @@ func (a *App) WatchFile() {
 }
 
 var lastOffset int64
-var isInitial bool = true
-var readFileName string
+
+// var isInitial bool = true
+// var readFileName string
 
 func (a *App) ResetOffset() {
+	runtime.EventsEmit(a.ctx, "commonLogOutput", "Reset And Read New File")
 	lastOffset = 0
-	isInitial = true
+	// isInitial = true
 }
 
 func (a *App) ReadFile(path string) {
@@ -258,9 +280,6 @@ func (a *App) ReadFile(path string) {
 	}
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
-		if isInitial {
-			continue
-		}
 		a.evaluateLine(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
@@ -271,7 +290,7 @@ func (a *App) ReadFile(path string) {
 		log.Fatal(err)
 	}
 	log.Default().Println("[DEBUG] [LOG] newOffset: ", lastOffset)
-	isInitial = false
+	// isInitial = false
 }
 
 // 行の評価
@@ -287,18 +306,25 @@ func (a *App) evaluateLine(line string) {
 				text = strings.Join(matches[1:], "")
 			}
 			if text != "" {
+				// オフセットが0の場合は初回読み込みと判断してスキップ
+				if lastOffset == 0 {
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "+Offset 0")
+					continue
+				}
 				a.OutputLog(setting.Title + " : " + text)
 				// setting.Type によって処理を分岐
-				if setting.Type == "Web Request" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "Web Request:"+text)
+				if setting.Type == "WebRequest" {
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "Web Request: "+setting.Title+" "+text)
 					message := a.postHttpRequest(text, setting.Title, setting.URL)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
-				} else if setting.Type == "xs" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "XSOverlay Notification:"+text)
+				} else if setting.Type == "SendXSOverlay" {
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "XSOverlay Notification: "+setting.Title+" "+text)
 					message := a.postXSOverlay(text, setting.Title)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
-				} else if setting.Type == "log" {
-					// a.LogOutput(matches)
+				} else if setting.Type == "SendDiscordWebHook" {
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "Discord Notification: "+setting.Title+" "+text)
+					message := postDiscordWebhook(text, setting.Title, setting.URL)
+					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				}
 			}
 		}
@@ -332,25 +358,73 @@ func (a *App) postHttpRequest(eventString string, title string, url string) stri
 
 func (a *App) postXSOverlay(eventString string, title string) string {
 	// XSOverlayへ通知の送信
-	data := new(XSOverlayModel)
-	data.Title = title
-	data.Content = eventString
-	data_json, _ := json.Marshal(data)
+	// https://xsoverlay.vercel.app/Developer/API/websockets/apicommands
+	notification := new(XSONotificationObject)
+	notification.Type = 1
+	notification.Title = title
+	notification.Content = eventString
+	notification_json, _ := json.Marshal(notification)
+	notification_json_str := string(notification_json)
 
-	url := "127.0.0.1"
-	port := "42069"
+	url := "localhost"
+	port := "42070"
+
+	apiObject := new(XSOApiObject)
+	apiObject.Sender = "vrc_log_watcher"
+	apiObject.Target = "XSOverlay"
+	apiObject.Command = "SendNotification"
+	apiObject.JsonData = notification_json_str
+	apiObject_json, _ := json.Marshal(notification)
+	// apiObject_json_str := string(apiObject_json)
 
 	// WebSocketを使って通知を送信
-	ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port, nil)
+	ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=vrc_log_watcher", nil)
 	if err != nil {
 		// log.Fatal(err)
 		return err.Error()
 	}
 	defer ws.Close()
-	err = ws.WriteMessage(websocket.TextMessage, data_json)
+	err = ws.WriteMessage(websocket.TextMessage, apiObject_json)
 	if err != nil {
 		// log.Fatal(err)
 		return err.Error()
 	}
+
+	// conn, err := net.Dial("udp4", url+":"+port+"/?client=vrc_log_watcher")
+	// if err != nil {
+	// 	return err.Error()
+	// }
+	// defer conn.Close()
+	// _, err = conn.Write([]byte(apiObject_json))
+	// if err != nil {
+	// 	return err.Error()
+	// }
+	return "OK"
+}
+
+func postDiscordWebhook(eventString string, title string, webhookURL string) string {
+	// メッセージの内容を定義
+	message := map[string]string{
+		"content": title + ": " + eventString,
+	}
+	// メッセージをJSON形式に変換
+	jsonData, err := json.Marshal(message)
+	if err != nil {
+		return err.Error()
+	}
+	// HTTP POSTリクエストを作成
+	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err.Error()
+	}
+	// Content-Typeを設定
+	req.Header.Set("Content-Type", "application/json")
+	// HTTPリクエストを送信
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err.Error()
+	}
+	defer resp.Body.Close()
 	return "OK"
 }

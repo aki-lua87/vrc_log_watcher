@@ -47,7 +47,7 @@
       clearInterval(intervalId);
     }
     await getLogFiles();
-    intervalId = setInterval(getLogFiles, 1 * 60 * 1000);
+    intervalId = setInterval(getLogFiles, 1 * 15 * 1000);
     WatchFile().then((result) => console.log(result));
   }
 
@@ -62,15 +62,14 @@
       return;
     }
     // ログフォルダ内のファイルを取得する
-    const tempFileName = logFileName;
     await GetNewestFileName(saveData.path).then(
       (result) => (logFileName = result),
     );
-    if (tempFileName != logFileName) {
-      await ResetOffset().then();
-    }
+    // if (tempFileName !== logFileName) {
+    //   await ResetOffset().then();
+    // }
     // 本当は↑に入れたいがなぜかログファイルが更新されないことがあるので
-    await SetFileName(logFileName).then((result) => console.log(result));
+    // await SetFileName(logFileName).then((result) => console.log(result));
   }
 
   async function addContent() {

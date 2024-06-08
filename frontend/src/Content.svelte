@@ -61,11 +61,12 @@
     />
     <label class="text" for="Type">イベントタイプ</label>
     <select bind:value={content.type} on:change={(e) => handleInput(e, "type")}>
-        <option value="Web Request">Web Request</option>
-        <option value="Send XSOverray">Send XSOverray</option>
-        <option value="Output Text">Output Text</option>
+        <option value="WebRequest">Web Request</option>
+        <option value="SendXSOverlay">Send XSOverlay</option>
+        <option value="SendDiscordWebHook">Send Discord WebHook</option>
+        <!-- <option value="OutputText">Output Text</option> -->
     </select>
-    {#if content.type === "Web Request"}
+    {#if content.type === "Web Request" || content.type === "SendDiscordWebHook"}
         <label class="text" for="url-input">URL</label>
         <input
             type="text"

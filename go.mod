@@ -1,4 +1,4 @@
-module connector
+module vrc_log_watcher
 
 go 1.21
 
