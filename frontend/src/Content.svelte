@@ -65,6 +65,7 @@
         <option value="SendXSOverlay">Send XSOverlay</option>
         <option value="SendDiscordWebHook">Send Discord WebHook</option>
         <!-- <option value="OutputText">Output Text</option> -->
+        <option value="Disable">Disable</option>
     </select>
     {#if content.type === "Web Request" || content.type === "SendDiscordWebHook"}
         <label class="text" for="url-input">URL</label>
@@ -85,7 +86,7 @@
         flex-direction: column;
         gap: 0.5rem;
         padding: 1rem;
-        background-color: #fff;
+        background-color: #c7c7c7;
         border: 1px solid #ddd;
         border-radius: 4px;
         flex-grow: 1;

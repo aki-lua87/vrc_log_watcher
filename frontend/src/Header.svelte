@@ -30,9 +30,9 @@
     /* ボタンは1行分の高さに */
     button {
         /* margin: 0 0.5rem; */
-        padding: rem 1rem;
+        margin-top: 1rem;
         /* ボタンの高さを1行分に */
-        height: 2rem;
+        height: 1.6rem;
         /* ボタンの幅を1行分に */
         width: 10rem;
         /* 上下中央揃え */

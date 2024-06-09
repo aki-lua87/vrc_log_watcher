@@ -105,8 +105,8 @@ func (a *App) OutputLog(logstring string) {
 // }
 
 func (a *App) LoadSetting() SaveData {
-	log.Default().Println("[DEBUG] [LOG] LoadSetting")
-	runtime.EventsEmit(a.ctx, "commonLogOutput", "LoadSetting")
+	log.Default().Println("[DEBUG] [LOG] Load Setting")
+	runtime.EventsEmit(a.ctx, "commonLogOutput", "setting.json Load")
 	// 設定ファイルの読み込み
 	file, err := os.ReadFile("setting.json")
 	if err != nil {
@@ -121,7 +121,7 @@ func (a *App) LoadSetting() SaveData {
 		runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
 	}
 	log.Default().Println(saveData)
-	runtime.EventsEmit(a.ctx, "commonLogOutput", "Target Log Folder:"+saveData.LogPath)
+	runtime.EventsEmit(a.ctx, "commonLogOutput", "Target log folder:"+saveData.LogPath)
 	// a.SaveData.LogPath = saveData.LogPath
 	a.SaveData = saveData
 	return saveData
@@ -141,7 +141,7 @@ func (a *App) UpdateSetting(ss []Setting) {
 	if err != nil {
 		runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
 	}
-	runtime.EventsEmit(a.ctx, "commonLogOutput", "Setting Updated Successfully")
+	// runtime.EventsEmit(a.ctx, "commonLogOutput", "Setting Updated Successfully")
 }
 
 func (a *App) OpenFolderSelectWindow() string {
@@ -208,7 +208,7 @@ func (a *App) GetNewestFileName(path string) string {
 		a.targetFileName = newestFile.Name()
 		a.ResetOffset() // オフセット削除
 		a.ReadFile()    // 初回内容読み取り
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "New target log file name:"+a.targetFileName)
+		runtime.EventsEmit(a.ctx, "commonLogOutput", "Reading log file name:"+a.targetFileName)
 		return newestFile.Name() // Viewへ反映
 	}
 	return "対象のファイルが見つかりませんでした"
@@ -373,6 +373,11 @@ func (a *App) postHttpRequest(eventString string, title string, url string) stri
 	return "OK"
 }
 
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
 func (a *App) postXSOverlay(eventString string, title string) string {
 	// XSOverlayへ通知の送信
 	// https://xsoverlay.vercel.app/Developer/API/websockets/apicommands
@@ -387,21 +392,22 @@ func (a *App) postXSOverlay(eventString string, title string) string {
 	port := "42070"
 
 	apiObject := new(XSOApiObject)
-	apiObject.Sender = "vrc_log_watcher"
+	apiObject.Sender = "VRCLogWatcher"
 	apiObject.Target = "XSOverlay"
 	apiObject.Command = "SendNotification"
 	apiObject.JsonData = notification_json_str
-	apiObject_json, _ := json.Marshal(notification)
+	// apiObject_json, _ := json.Marshal(notification)
 	// apiObject_json_str := string(apiObject_json)
 
 	// WebSocketを使って通知を送信
-	ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=vrc_log_watcher", nil)
+	// ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=vrc_log_watcher", nil)
+	ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogWatcher", nil)
 	if err != nil {
 		// log.Fatal(err)
 		return err.Error()
 	}
 	defer ws.Close()
-	err = ws.WriteMessage(websocket.TextMessage, apiObject_json)
+	err = ws.WriteJSON(apiObject)
 	if err != nil {
 		// log.Fatal(err)
 		return err.Error()

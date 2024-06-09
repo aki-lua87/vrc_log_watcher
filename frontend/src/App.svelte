@@ -41,6 +41,7 @@
 
   init();
   async function init() {
+    logs = [...logs, `${new Date().toLocaleTimeString()} Application start`];
     await LoadSetting().then((result) => (saveData = result));
     contents = saveData.settings;
     if (intervalId != 0) {
