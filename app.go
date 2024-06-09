@@ -26,6 +26,7 @@ import (
 // App struct
 type App struct {
 	ctx            context.Context
+	xsWS           *websocket.Conn
 	targetFileName string
 	SaveData       SaveData
 }
@@ -55,9 +56,11 @@ type XSOApiObject struct {
 }
 
 type XSONotificationObject struct {
-	Type    int    `json:"type"`
-	Title   string `json:"title"`
-	Content string `json:"content"`
+	Type    int     `json:"type"`
+	Title   string  `json:"title"`
+	Content string  `json:"content"`
+	Timeout float32 `json:"timeout"`
+	Height  float32 `json:"height"`
 	// Height        float32 `json:"height"`
 	// SourceApp     string  `json:"sourceApp"`
 	// Timeout       int     `json:"timeout"`
@@ -87,6 +90,11 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	a.xsWS = nil
+	// url := "localhost"
+	// port := "42070"
+	// a.xsWS, _, _ = websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogWatcher", nil)
 	runtime.LogInfo(ctx, "Application Startup called!")
 }
 
@@ -135,7 +143,7 @@ func (a *App) UpdateSetting(ss []Setting) {
 	if err != nil {
 		runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
 	}
-	runtime.EventsEmit(a.ctx, "commonLogOutput", string(jsonData))
+	// runtime.EventsEmit(a.ctx, "commonLogOutput", string(jsonData))
 	// JSONをファイルに書き込む
 	err = os.WriteFile("setting.json", jsonData, 0644)
 	if err != nil {
@@ -257,7 +265,7 @@ var lastOffset int64
 var isWatchFileRunning bool
 
 func (a *App) ResetOffset() {
-	runtime.EventsEmit(a.ctx, "commonLogOutput", "Reset And Read New File")
+	// runtime.EventsEmit(a.ctx, "commonLogOutput", "Reset And Read New File")
 	lastOffset = 0
 }
 
@@ -292,6 +300,10 @@ func (a *App) ReadFile() {
 		return
 	}
 	scanner := bufio.NewScanner(file)
+	// if lastOffset == 0 {
+	// 	scanner.Scan()
+	// 	lastOffset, _ = file.Seek(0, io.SeekCurrent)
+	// }
 	for scanner.Scan() {
 		a.evaluateLine(scanner.Text())
 	}
@@ -312,6 +324,10 @@ func (a *App) ReadFile() {
 
 // 行の評価
 func (a *App) evaluateLine(line string) {
+	if lastOffset == 0 {
+		// runtime.EventsEmit(a.ctx, "commonLogOutput", "+Offset 0")
+		return
+	}
 	// a.SaveData.Settings をループさせる
 	for _, setting := range a.SaveData.Settings {
 		if setting.RegExp != "" {
@@ -331,15 +347,15 @@ func (a *App) evaluateLine(line string) {
 				a.OutputLog(setting.Title + " : " + text)
 				// setting.Type によって処理を分岐
 				if setting.Type == "WebRequest" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "Web Request: "+setting.Title+" "+text)
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "[Web Request] "+setting.Title+" : "+text)
 					message := a.postHttpRequest(text, setting.Title, setting.URL)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				} else if setting.Type == "SendXSOverlay" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "XSOverlay Notification: "+setting.Title+" "+text)
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "[XSOverlay Notification] "+setting.Title+" : "+text)
 					message := a.postXSOverlay(text, setting.Title)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				} else if setting.Type == "SendDiscordWebHook" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "Discord Notification: "+setting.Title+" "+text)
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "[Discord Notification] "+setting.Title+" : "+text)
 					message := postDiscordWebhook(text, setting.Title, setting.URL)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				}
@@ -370,12 +386,7 @@ func (a *App) postHttpRequest(eventString string, title string, url string) stri
 		return err.Error()
 	}
 	log.Default().Println(string(body))
-	return "OK"
-}
-
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
+	return "Web Request Sent Successfully"
 }
 
 func (a *App) postXSOverlay(eventString string, title string) string {
@@ -385,9 +396,10 @@ func (a *App) postXSOverlay(eventString string, title string) string {
 	notification.Type = 1
 	notification.Title = title
 	notification.Content = eventString
+	notification.Timeout = 1.2
+	notification.Height = 100.0
 	notification_json, _ := json.Marshal(notification)
 	notification_json_str := string(notification_json)
-
 	url := "localhost"
 	port := "42070"
 
@@ -396,33 +408,37 @@ func (a *App) postXSOverlay(eventString string, title string) string {
 	apiObject.Target = "XSOverlay"
 	apiObject.Command = "SendNotification"
 	apiObject.JsonData = notification_json_str
-	// apiObject_json, _ := json.Marshal(notification)
-	// apiObject_json_str := string(apiObject_json)
-
-	// WebSocketを使って通知を送信
-	// ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=vrc_log_watcher", nil)
-	ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogWatcher", nil)
+	if a.xsWS == nil {
+		log.Default().Println("[DEBUG] [LOG] a.xsWS != nil")
+		ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogWatcher", nil)
+		if err != nil {
+			// log.Fatal(err)
+			a.xsWS = nil
+			return err.Error()
+		}
+		a.xsWS = ws
+	}
+	// defer ws.Close()
+	err := a.xsWS.WriteJSON(apiObject)
 	if err != nil {
 		// log.Fatal(err)
+		a.xsWS.Close()
+		// retry
+		rws, _, errr1 := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogWatcher", nil)
+		if errr1 != nil {
+			// log.Fatal(err)
+			a.xsWS = nil
+			return errr1.Error()
+		}
+		a.xsWS = rws
+		errr2 := a.xsWS.WriteJSON(apiObject)
+		if errr2 != nil {
+			a.xsWS.Close()
+			a.xsWS = nil
+		}
 		return err.Error()
 	}
-	defer ws.Close()
-	err = ws.WriteJSON(apiObject)
-	if err != nil {
-		// log.Fatal(err)
-		return err.Error()
-	}
-
-	// conn, err := net.Dial("udp4", url+":"+port+"/?client=vrc_log_watcher")
-	// if err != nil {
-	// 	return err.Error()
-	// }
-	// defer conn.Close()
-	// _, err = conn.Write([]byte(apiObject_json))
-	// if err != nil {
-	// 	return err.Error()
-	// }
-	return "OK"
+	return "XS Overlay Notification Sent Successfully"
 }
 
 func postDiscordWebhook(eventString string, title string, webhookURL string) string {
@@ -449,5 +465,5 @@ func postDiscordWebhook(eventString string, title string, webhookURL string) str
 		return err.Error()
 	}
 	defer resp.Body.Close()
-	return "OK"
+	return "Discord Webhook Sent Successfully"
 }
