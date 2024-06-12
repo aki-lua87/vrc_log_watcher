@@ -10,6 +10,8 @@ export function OpenFolderSelectWindow():Promise<string>;
 
 export function OutputLog(arg1:string):Promise<void>;
 
+export function PingXSOverlay():Promise<void>;
+
 export function ReadFile():Promise<void>;
 
 export function ResetOffset():Promise<void>;

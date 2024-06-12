@@ -18,6 +18,10 @@ export function OutputLog(arg1) {
   return window['go']['main']['App']['OutputLog'](arg1);
 }
 
+export function PingXSOverlay() {
+  return window['go']['main']['App']['PingXSOverlay']();
+}
+
 export function ReadFile() {
   return window['go']['main']['App']['ReadFile']();
 }

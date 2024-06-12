@@ -17,7 +17,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "vrc_log_watcher",
+		Title:  "VLW",
 		Width:  1280,
 		Height: 960,
 		AssetServer: &assetserver.Options{

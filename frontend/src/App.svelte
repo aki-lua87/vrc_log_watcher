@@ -3,7 +3,7 @@
   import { OpenFolderSelectWindow } from "../wailsjs/go/main/App.js";
   import { GetNewestFileName } from "../wailsjs/go/main/App.js";
   import { WatchFile } from "../wailsjs/go/main/App.js";
-  import { ResetOffset } from "../wailsjs/go/main/App.js";
+  import { PingXSOverlay } from "../wailsjs/go/main/App.js";
   import { UpdateSetting } from "../wailsjs/go/main/App.js";
   import { LoadSetting } from "../wailsjs/go/main/App.js";
   import { ReadFile } from "../wailsjs/go/main/App.js";
@@ -50,6 +50,7 @@
     await getLogFiles();
     intervalId = setInterval(getLogFiles, 1 * (60 / 4) * 1000);
     setInterval(watchFile, 1 * 1 * 1000);
+    setInterval(PingXSOverlay, 1 * 60 * 1000);
     // fsnotifyでの ファイルの監視がなんか有効ではなさそう1
     // WatchFile().then((result) => console.log(result));
   }

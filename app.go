@@ -37,8 +37,10 @@ type SaveData struct {
 }
 
 type HttpRequestModel struct {
-	Value string `json:"value"`
-	Title string `json:"title"`
+	Message     string `json:"message"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+	Regexp      string `json:"regexp"`
 }
 
 type XSOApiObject struct {
@@ -90,7 +92,6 @@ func NewApp() *App {
 
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-
 	a.xsWS = nil
 	// url := "localhost"
 	// port := "42070"
@@ -118,9 +119,9 @@ func (a *App) LoadSetting() SaveData {
 	// 設定ファイルの読み込み
 	file, err := os.ReadFile("setting.json")
 	if err != nil {
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
-		os.WriteFile("setting.json", nil, 0644)
-		return SaveData{}
+		runtime.EventsEmit(a.ctx, "commonLogOutput", "Setting file read error:"+err.Error())
+		a.UpdateSetting([]Setting{})
+		return a.SaveData
 	}
 	// JSONをStructに変換
 	var saveData SaveData
@@ -182,7 +183,7 @@ func (a *App) OpenFolderSelectWindow() string {
 
 // フォルダ内の最新のtxtファイルを探索し、そのファイル名を返す
 func (a *App) GetNewestFileName(path string) string {
-	log.Default().Println("[DEBUG] [LOG] GetNewestFileName")
+	// log.Default().Println("[DEBUG] [LOG] GetNewestFileName")
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
@@ -284,8 +285,8 @@ func (a *App) ReadFile() {
 	}
 	isWatchFileRunning = true
 	path := a.SaveData.LogPath + "\\" + a.targetFileName
-	log.Default().Println("[DEBUG] [LOG] call readFile: ", path)
-	log.Default().Println("[DEBUG] [LOG] lastOffset: ", lastOffset)
+	// log.Default().Println("[DEBUG] [LOG] call readFile: ", path)
+	// log.Default().Println("[DEBUG] [LOG] lastOffset: ", lastOffset)
 	file, err := os.Open(path)
 	if err != nil {
 		log.Default().Println("[ERROR] [LOG] ", err.Error())
@@ -319,7 +320,7 @@ func (a *App) ReadFile() {
 		return
 	}
 	isWatchFileRunning = false
-	log.Default().Println("[DEBUG] [LOG] newOffset: ", lastOffset)
+	// log.Default().Println("[DEBUG] [LOG] newOffset: ", lastOffset)
 }
 
 // 行の評価
@@ -347,15 +348,15 @@ func (a *App) evaluateLine(line string) {
 				a.OutputLog(setting.Title + " : " + text)
 				// setting.Type によって処理を分岐
 				if setting.Type == "WebRequest" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "[Web Request] "+setting.Title+" : "+text)
-					message := a.postHttpRequest(text, setting.Title, setting.URL)
+					// runtime.EventsEmit(a.ctx, "commonLogOutput", "[Web Request] "+setting.Title+" : "+text)
+					message := a.postHttpRequest(text, setting.Title, setting.URL, setting.RegExp, setting.Details)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				} else if setting.Type == "SendXSOverlay" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "[XSOverlay Notification] "+setting.Title+" : "+text)
+					// runtime.EventsEmit(a.ctx, "commonLogOutput", "[XSOverlay Notification] "+setting.Title+" : "+text)
 					message := a.postXSOverlay(text, setting.Title)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				} else if setting.Type == "SendDiscordWebHook" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "[Discord Notification] "+setting.Title+" : "+text)
+					// runtime.EventsEmit(a.ctx, "commonLogOutput", "[Discord Notification] "+setting.Title+" : "+text)
 					message := postDiscordWebhook(text, setting.Title, setting.URL)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				}
@@ -364,7 +365,7 @@ func (a *App) evaluateLine(line string) {
 	}
 }
 
-func (a *App) postHttpRequest(eventString string, title string, url string) string {
+func (a *App) postHttpRequest(eventString string, title string, url string, regx string, desc string) string {
 	if url == "" {
 		return "URL is empty"
 	}
@@ -373,8 +374,10 @@ func (a *App) postHttpRequest(eventString string, title string, url string) stri
 		return "URL is invalid"
 	}
 	data := new(HttpRequestModel)
-	data.Value = eventString
+	data.Message = eventString
 	data.Title = title
+	data.Description = desc
+	data.Regexp = regx
 	data_json, _ := json.Marshal(data)
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(data_json))
 	if err != nil {
@@ -386,7 +389,21 @@ func (a *App) postHttpRequest(eventString string, title string, url string) stri
 		return err.Error()
 	}
 	log.Default().Println(string(body))
-	return "Web Request Sent Successfully"
+	return "[Web Request] Sent Successfully: " + title + ": " + eventString
+}
+
+func (a *App) PingXSOverlay() {
+	if a.xsWS != nil {
+		log.Default().Println("[DEBUG] [LOG] a.xsWS != nil")
+		rwerrr1 :=a.xsWS.WriteMessage(2, []byte{})
+		if rwerrr1 != nil {
+			log.Default().Println("[DEBUG] [LOG] a.xsWS.WriteMessage Error:" + rwerrr1.Error())
+			a.xsWS.Close()
+			a.xsWS = nil
+		}
+	} else {
+		log.Default().Println("[DEBUG] [LOG] a.xsWS == nil")
+	}
 }
 
 func (a *App) postXSOverlay(eventString string, title string) string {
@@ -438,7 +455,7 @@ func (a *App) postXSOverlay(eventString string, title string) string {
 		}
 		return err.Error()
 	}
-	return "XS Overlay Notification Sent Successfully"
+	return "[XS Overlay] Notification Sent Successfully: " + title + ": " + eventString
 }
 
 func postDiscordWebhook(eventString string, title string, webhookURL string) string {
@@ -465,5 +482,5 @@ func postDiscordWebhook(eventString string, title string, webhookURL string) str
 		return err.Error()
 	}
 	defer resp.Body.Close()
-	return "Discord Webhook Sent Successfully"
+	return "[Discord Webhook] Sent Successfully: " + title + ": " + eventString
 }

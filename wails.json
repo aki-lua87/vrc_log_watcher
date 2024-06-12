@@ -1,7 +1,7 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "vrc_log_watcher",
-  "outputfilename": "vrc_log_watcher",
+  "name": "VLW",
+  "outputfilename": "VLW",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
