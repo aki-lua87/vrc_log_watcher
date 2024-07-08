@@ -17,5 +17,3 @@ export function ReadFile():Promise<void>;
 export function ResetOffset():Promise<void>;
 
 export function UpdateSetting(arg1:Array<main.Setting>):Promise<void>;
-
-export function WatchFile():Promise<void>;
