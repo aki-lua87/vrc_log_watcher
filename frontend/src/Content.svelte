@@ -6,10 +6,10 @@
     function updateContent(key, value) {
         content = { ...content, [key]: value };
         dispatch("updateContent", content);
-        dispatch(
-            "logEvent",
-            `${new Date().toLocaleTimeString()} ${content.title} ${key} updated to ${value}`,
-        );
+        // dispatch(
+        //     "logEvent",
+        //     `${new Date().toLocaleTimeString()} ${content.title} ${key} updated to ${value}`,
+        // );
     }
 
     function handleInput(event, key) {
@@ -19,10 +19,10 @@
 
     function deleteContent() {
         dispatch("deleteContent", content);
-        dispatch(
-            "logEvent",
-            `${new Date().toLocaleTimeString()} deleted: ${content.id} ${content.title}`,
-        );
+        // dispatch(
+        //     "logEvent",
+        //     `${new Date().toLocaleTimeString()} deleted: ${content.id} ${content.title}`,
+        // );
     }
 </script>
 
