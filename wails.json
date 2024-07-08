@@ -1,6 +1,6 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "VRC Log Watcher - VRChatログ読み取りツール",
+  "name": "VRC-Log-Watcher",
   "outputfilename": "vlw",
   "frontend:install": "npm install",
   "frontend:build": "npm run build",
