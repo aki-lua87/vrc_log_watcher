@@ -2,13 +2,11 @@
   import logo from "./assets/images/logo-universal.png";
   import { OpenFolderSelectWindow } from "../wailsjs/go/main/App.js";
   import { GetNewestFileName } from "../wailsjs/go/main/App.js";
-  import { WatchFile } from "../wailsjs/go/main/App.js";
   import { PingXSOverlay } from "../wailsjs/go/main/App.js";
   import { UpdateSetting } from "../wailsjs/go/main/App.js";
   import { LoadSetting } from "../wailsjs/go/main/App.js";
   import { ReadFile } from "../wailsjs/go/main/App.js";
 
-  import { onMount } from "svelte";
   import Header from "./Header.svelte";
   import Content from "./Content.svelte";
   import Tabs from "./Tabs.svelte";
@@ -16,7 +14,6 @@
 
   import { main } from "../wailsjs/go/models";
 
-  // let logFilePath: string = "";
   let logFileName: string = "";
   let intervalId = 0;
   let saveData: main.SaveData;
@@ -51,8 +48,6 @@
     intervalId = setInterval(getLogFiles, 1 * (60 / 4) * 1000);
     setInterval(watchFile, 1 * 1 * 1000);
     setInterval(PingXSOverlay, 1 * 60 * 1000);
-    // fsnotifyでの ファイルの監視がなんか有効ではなさそう1
-    // WatchFile().then((result) => console.log(result));
   }
 
   async function getLogFolderPath() {
@@ -69,11 +64,6 @@
     await GetNewestFileName(saveData.path).then(
       (result) => (logFileName = result),
     );
-    // if (tempFileName !== logFileName) {
-    //   await ResetOffset().then();
-    // }
-    // 本当は↑に入れたいがなぜかログファイルが更新されないことがあるので
-    // await SetFileName(logFileName).then((result) => console.log(result));
   }
 
   async function watchFile() {
@@ -109,10 +99,6 @@
 
   function selectContent(customEvent: CustomEvent<main.Setting>) {
     let selectContent = customEvent.detail;
-    // logs = [
-    //   ...logs,
-    //   `${new Date().toLocaleTimeString()} selectContent: ${selectContent.id} ${selectContent.title}`,
-    // ];
     selectedContent = contents.find(
       (content) => content.id === selectContent.id,
     );
@@ -125,10 +111,6 @@
     contents = contents.map((content) =>
       content.id === updateContent.id ? updateContent : content,
     );
-    // logs = [
-    //   ...logs,
-    //   `${new Date().toLocaleTimeString()} updateContent: ${updateContent.id} ${updateContent.title}`,
-    // ];
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 

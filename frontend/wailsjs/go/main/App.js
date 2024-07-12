@@ -33,7 +33,3 @@ export function ResetOffset() {
 export function UpdateSetting(arg1) {
   return window['go']['main']['App']['UpdateSetting'](arg1);
 }
-
-export function WatchFile() {
-  return window['go']['main']['App']['WatchFile']();
-}

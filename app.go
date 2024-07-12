@@ -18,11 +18,6 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// backend url
-// var backendURL string = "https://backend.jmnt34deg.workers.dev"
-
-// var targetFileName string
-
 // App struct
 type App struct {
 	ctx            context.Context
@@ -93,25 +88,12 @@ func NewApp() *App {
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.xsWS = nil
-	// url := "localhost"
-	// port := "42070"
-	// a.xsWS, _, _ = websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogWatcher", nil)
 	runtime.LogInfo(ctx, "Application Startup called!")
 }
 
 func (a *App) OutputLog(logstring string) {
 	log.Default().Println("[DEBUG] [LOG] OutputLog:" + logstring)
 }
-
-// func (a *App) SetFileName(fileName string) {
-// 	log.Default().Println("[DEBUG] [LOG] SetFileName:" + fileName)
-// 	if fileName == a.targetFileName {
-// 		log.Default().Println("[DEBUG] [LOG] SetFileName: 同じファイル名")
-// 		return
-// 	}
-// 	a.targetFileName = fileName
-// 	a.ReadFile()
-// }
 
 func (a *App) LoadSetting() SaveData {
 	log.Default().Println("[DEBUG] [LOG] Load Setting")
@@ -170,11 +152,13 @@ func (a *App) OpenFolderSelectWindow() string {
 	// StructをJSONに変換
 	jsonData, err := json.Marshal(a.SaveData)
 	if err != nil {
+		log.Default().Println(err)
 		log.Fatal(err)
 	}
 	// JSONをファイルに書き込む
 	err = os.WriteFile("setting.json", jsonData, 0644)
 	if err != nil {
+		log.Default().Println(err)
 		log.Fatal(err)
 	}
 	a.SaveData.LogPath = path
@@ -209,6 +193,10 @@ func (a *App) GetNewestFileName(path string) string {
 			}
 		}
 	}
+	if newestFile == nil {
+		runtime.EventsEmit(a.ctx, "commonLogOutput", "監視対象のファイルが見つかりませんでした")
+		return ""
+	}
 	if newestFile.Name() == a.targetFileName {
 		return a.targetFileName // Viewへ反映(別に更新しなくてもいいけど)
 	}
@@ -220,46 +208,8 @@ func (a *App) GetNewestFileName(path string) string {
 		runtime.EventsEmit(a.ctx, "commonLogOutput", "Reading log file name:"+a.targetFileName)
 		return newestFile.Name() // Viewへ反映
 	}
-	return "対象のファイルが見つかりませんでした"
-}
-
-// fsnotifyでの ファイルの監視を開始する
-func (a *App) WatchFile() {
-	// 問題があったのでコメントアウト: 見かけ上の更新がされないので発火しない
-	// log.Default().Println("[DEBUG] [LOG] Start watching file")
-	// lastOffset = 0
-	// watcher, err := fsnotify.NewWatcher()
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// defer watcher.Close()
-
-	// done := make(chan bool)
-	// go func() {
-	// 	for {
-	// 		select {
-	// 		case event, ok := <-watcher.Events:
-	// 			if !ok {
-	// 				return
-	// 			}
-	// 			fullpath := a.SaveData.LogPath + "\\" + a.targetFileName
-	// 			if event.Name == fullpath {
-	// 				a.ReadFile(fullpath)
-	// 			}
-	// 		case err, ok := <-watcher.Errors:
-	// 			if !ok {
-	// 				return
-	// 			}
-	// 			log.Println("error:", err)
-	// 		}
-	// 	}
-	// }()
-
-	// err = watcher.Add(a.SaveData.LogPath)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// <-done
+	runtime.EventsEmit(a.ctx, "commonLogOutput", "監視対象のファイルが見つかりませんでした")
+	return ""
 }
 
 var lastOffset int64
@@ -285,8 +235,6 @@ func (a *App) ReadFile() {
 	}
 	isWatchFileRunning = true
 	path := a.SaveData.LogPath + "\\" + a.targetFileName
-	// log.Default().Println("[DEBUG] [LOG] call readFile: ", path)
-	// log.Default().Println("[DEBUG] [LOG] lastOffset: ", lastOffset)
 	file, err := os.Open(path)
 	if err != nil {
 		log.Default().Println("[ERROR] [LOG] ", err.Error())
@@ -301,10 +249,6 @@ func (a *App) ReadFile() {
 		return
 	}
 	scanner := bufio.NewScanner(file)
-	// if lastOffset == 0 {
-	// 	scanner.Scan()
-	// 	lastOffset, _ = file.Seek(0, io.SeekCurrent)
-	// }
 	for scanner.Scan() {
 		a.evaluateLine(scanner.Text())
 	}
@@ -320,20 +264,17 @@ func (a *App) ReadFile() {
 		return
 	}
 	isWatchFileRunning = false
-	// log.Default().Println("[DEBUG] [LOG] newOffset: ", lastOffset)
 }
 
 // 行の評価
 func (a *App) evaluateLine(line string) {
 	if lastOffset == 0 {
-		// runtime.EventsEmit(a.ctx, "commonLogOutput", "+Offset 0")
 		return
 	}
 	// a.SaveData.Settings をループさせる
 	for _, setting := range a.SaveData.Settings {
 		if setting.RegExp != "" {
 			pattern := regexp.MustCompile(setting.RegExp)
-			// matches := pattern.FindString(line)
 			matches := pattern.FindStringSubmatch(line)
 			text := ""
 			if len(matches) > 1 {
@@ -342,21 +283,17 @@ func (a *App) evaluateLine(line string) {
 			if text != "" {
 				// オフセットが0の場合は初回読み込みと判断してスキップ
 				if lastOffset == 0 {
-					// runtime.EventsEmit(a.ctx, "commonLogOutput", "+Offset 0")
 					continue
 				}
 				a.OutputLog(setting.Title + " : " + text)
 				// setting.Type によって処理を分岐
 				if setting.Type == "WebRequest" {
-					// runtime.EventsEmit(a.ctx, "commonLogOutput", "[Web Request] "+setting.Title+" : "+text)
 					message := a.postHttpRequest(text, setting.Title, setting.URL, setting.RegExp, setting.Details)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				} else if setting.Type == "SendXSOverlay" {
-					// runtime.EventsEmit(a.ctx, "commonLogOutput", "[XSOverlay Notification] "+setting.Title+" : "+text)
 					message := a.postXSOverlay(text, setting.Title)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				} else if setting.Type == "SendDiscordWebHook" {
-					// runtime.EventsEmit(a.ctx, "commonLogOutput", "[Discord Notification] "+setting.Title+" : "+text)
 					message := postDiscordWebhook(text, setting.Title, setting.URL)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
 				}
@@ -395,7 +332,7 @@ func (a *App) postHttpRequest(eventString string, title string, url string, regx
 func (a *App) PingXSOverlay() {
 	if a.xsWS != nil {
 		log.Default().Println("[DEBUG] [LOG] a.xsWS != nil")
-		rwerrr1 :=a.xsWS.WriteMessage(2, []byte{})
+		rwerrr1 := a.xsWS.WriteMessage(2, []byte{})
 		if rwerrr1 != nil {
 			log.Default().Println("[DEBUG] [LOG] a.xsWS.WriteMessage Error:" + rwerrr1.Error())
 			a.xsWS.Close()
