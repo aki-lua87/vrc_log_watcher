@@ -43,14 +43,6 @@
         bind:value={content.details}
         on:change={(e) => handleInput(e, "details")}
     />
-    <!-- <label class="text" for="Target">イベント起動文字列</label>
-    <input
-        id="Target"
-        type="text"
-        placeholder="Target"
-        bind:value={content.target}
-        on:change={(e) => handleInput(e, "target")}
-    /> -->
     <label class="text" for="RegExp">正規表現抽出</label>
     <input
         id="RegExp"
@@ -59,23 +51,17 @@
         bind:value={content.regexp}
         on:change={(e) => handleInput(e, "regexp")}
     />
-    <label class="text" for="Type">イベントタイプ</label>
-    <select bind:value={content.type} on:change={(e) => handleInput(e, "type")}>
-        <option value="WebRequest">Web Request</option>
-        <option value="SendXSOverlay">Send XSOverlay</option>
-        <option value="SendDiscordWebHook">Send Discord WebHook</option>
-        <!-- <option value="OutputText">Output Text</option> -->
-        <option value="Disable">Disable</option>
-    </select>
-    {#if content.type === "Web Request" || content.type === "SendDiscordWebHook"}
-        <label class="text" for="url-input">URL</label>
-        <input
-            type="text"
-            placeholder="URL"
-            bind:value={content.url}
-            on:change={(e) => handleInput(e, "url")}
-        />
-    {/if}
+
+    <label class="text" for="Exclude"
+        >抽出結果が以下と一致する場合はスキップ</label
+    >
+    <input
+        id="Exclude"
+        type="text"
+        placeholder="Exclude Text"
+        bind:value={content.exclude}
+        on:change={(e) => handleInput(e, "exclude")}
+    />
 
     <button on:click={deleteContent} class="delete-button">DELETE</button>
 </div>

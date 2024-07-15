@@ -85,7 +85,7 @@
       type: "Web Request",
       url: "",
       regexp: "",
-      // trim2: "",
+      exclude: "",
     };
     contents = [...contents, newContent];
     // 選択を更新

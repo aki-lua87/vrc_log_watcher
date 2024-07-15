@@ -79,6 +79,7 @@ type Setting struct {
 	Type    string `json:"type"`
 	URL     string `json:"url"`
 	RegExp  string `json:"regexp"`
+	Exclude string `json:"exclude"`
 }
 
 func NewApp() *App {
@@ -283,6 +284,10 @@ func (a *App) evaluateLine(line string) {
 			if text != "" {
 				// オフセットが0の場合は初回読み込みと判断してスキップ
 				if lastOffset == 0 {
+					continue
+				}
+				// 除外文字と一致する場合はスキップ
+				if setting.Exclude == text {
 					continue
 				}
 				a.OutputLog(setting.Title + " : " + text)
