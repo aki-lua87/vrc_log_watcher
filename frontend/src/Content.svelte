@@ -64,6 +64,27 @@
         class="p-2 text-base"
     />
 
+    <label class="text text-black font-bold text-left" for="EventType"
+        >イベントタイプ</label
+    >
+    <select bind:value={content.type} on:change={(e) => handleInput(e, "type")}>
+        <option value="WebRequest">Web Request</option>
+        <option value="SendXSOverlay">Send XSOverlay</option>
+        <option value="SendDiscordWebHook">Send Discord WebHook</option>
+        <option value="Disable">Disable</option>
+    </select>
+    {#if content.type === "WebRequest" || content.type === "SendDiscordWebHook"}
+        <label class="text" for="url-input">URL</label>
+        <input
+            id="EventType"
+            type="text"
+            placeholder="URL"
+            bind:value={content.url}
+            on:change={(e) => handleInput(e, "url")}
+            class="p-2 text-base"
+        />
+    {/if}
+
     <button
         class="delete-button mt-4 p-2 bg-red-500 text-white border-none rounded cursor-pointer w-[7.5rem] self-end hover:bg-red-700"
         on:click={deleteContent}>DELETE</button
