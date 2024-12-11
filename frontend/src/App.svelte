@@ -85,7 +85,7 @@
       type: "Web Request",
       url: "",
       regexp: "",
-      // trim2: "",
+      exclude: "",
     };
     contents = [...contents, newContent];
     // 選択を更新
@@ -136,14 +136,15 @@
 </script>
 
 <main>
-  <div class="container">
+  <div class="flex flex-col h-screen">
     <Header filename={logFileName} on:getLogFolderPath={getLogFolderPath} />
-    <div class="main-content">
+    <div class="flex flex-1 overflow-hidden">
       <Tabs
         {contents}
         on:selectContent={selectContent}
         on:addContent={addContent}
       />
+
       {#if selectedContent}
         <Content
           bind:content={selectedContent}
@@ -156,28 +157,3 @@
     <Footer {logs} />
   </div>
 </main>
-
-<style>
-  .container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-  }
-  header {
-    flex-shrink: 0;
-  }
-  .main-content {
-    display: flex;
-    flex-grow: 1;
-    overflow: hidden;
-  }
-  .content {
-    flex-grow: 1;
-    overflow-y: auto;
-    padding: 1rem;
-  }
-  footer {
-    flex-shrink: 0;
-    text-align: left; /* フッターを左詰めに */
-  }
-</style>

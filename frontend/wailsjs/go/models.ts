@@ -8,6 +8,7 @@ export namespace main {
 	    type: string;
 	    url: string;
 	    regexp: string;
+	    exclude: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Setting(source);
@@ -22,6 +23,7 @@ export namespace main {
 	        this.type = source["type"];
 	        this.url = source["url"];
 	        this.regexp = source["regexp"];
+	        this.exclude = source["exclude"];
 	    }
 	}
 	export class SaveData {
