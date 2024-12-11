@@ -301,6 +301,11 @@ func (a *App) evaluateLine(line string) {
 				} else if setting.Type == "SendDiscordWebHook" {
 					message := postDiscordWebhook(text, setting.Title, setting.URL)
 					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
+				} else if setting.Type == "OutputTextFile" {
+					message := outputTextFile(text, setting.Title)
+					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
+				} else if setting.Type == "Disable" {
+					runtime.EventsEmit(a.ctx, "commonLogOutput", "[何もしない] "+text)
 				}
 			}
 		}
@@ -425,4 +430,31 @@ func postDiscordWebhook(eventString string, title string, webhookURL string) str
 	}
 	defer resp.Body.Close()
 	return "[Discord Webhook] Sent Successfully: " + title + ": " + eventString
+}
+
+func outputTextFile(eventString string, title string) string {
+	t := time.Now()
+	// フォルダが存在しない場合は作成 フォルダ名は YYYYMMDD
+	folderName := t.Format("20060102") + "_" + title
+	if _, err := os.Stat(folderName); os.IsNotExist(err) {
+		os.Mkdir(folderName, 0777)
+	}
+	// ファイル名は HHmmssSSS.txt
+	fileName := t.Format("150405.000")
+	// ファイル名から.を削除
+	fileName = strings.Replace(fileName, ".", "", 1)
+	// ファイルパスはこのアプリケーションの実行フォルダ内の YYYYMMDD/HHmmssSSS.txt
+	filePath := folderName + "/" + fileName + ".txt"
+	// ファイルを作成
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err.Error()
+	}
+	defer file.Close()
+	// ファイルに書き込み
+	_, err = file.WriteString(eventString)
+	if err != nil {
+		return err.Error()
+	}
+	return "[Log Output] Successfully " + title + ":" + fileName
 }

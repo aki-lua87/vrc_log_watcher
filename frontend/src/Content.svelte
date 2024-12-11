@@ -71,7 +71,8 @@
         <option value="WebRequest">Web Request</option>
         <option value="SendXSOverlay">Send XSOverlay</option>
         <option value="SendDiscordWebHook">Send Discord WebHook</option>
-        <option value="Disable">Disable</option>
+        <option value="OutputTextFile">Output Text File</option>
+        <option value="Disable">何もしない</option>
     </select>
     {#if content.type === "WebRequest" || content.type === "SendDiscordWebHook"}
         <label class="text" for="url-input">URL</label>
