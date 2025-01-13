@@ -1,5 +1,23 @@
 export namespace main {
 	
+	export class NoticeLog {
+	    text: string;
+	    metaData: string;
+	    title: string;
+	    canCopy: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new NoticeLog(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.text = source["text"];
+	        this.metaData = source["metaData"];
+	        this.title = source["title"];
+	        this.canCopy = source["canCopy"];
+	    }
+	}
 	export class Setting {
 	    id: string;
 	    title: string;

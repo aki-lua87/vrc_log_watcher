@@ -24,6 +24,14 @@ type App struct {
 	xsWS           *websocket.Conn
 	targetFileName string
 	SaveData       SaveData
+	NoticeLog      NoticeLog
+}
+
+type NoticeLog struct {
+	Text     string `json:"text"`
+	MetaData string `json:"metaData"`
+	Title    string `json:"title"`
+	CanCopy  bool   `json:"canCopy"`
 }
 
 type SaveData struct {
@@ -92,17 +100,37 @@ func (a *App) startup(ctx context.Context) {
 	runtime.LogInfo(ctx, "Application Startup called!")
 }
 
-func (a *App) OutputLog(logstring string) {
+func (a *App) OutputConsoleLog(logstring string) {
 	log.Default().Println("[DEBUG] [LOG] OutputLog:" + logstring)
+}
+
+func (a *App) SendNoticeLog(text string, metaData string, title string, canCopy bool) {
+	var logTemplate NoticeLog
+	logTemplate.Text = text
+	logTemplate.MetaData = metaData
+	logTemplate.Title = title
+	logTemplate.CanCopy = canCopy
+	runtime.EventsEmit(a.ctx, "commonLogOutput", logTemplate)
+}
+
+// dummy function NOTE: on load ts for models
+func (a *App) LoadNoticeLog() NoticeLog {
+	return a.NoticeLog
 }
 
 func (a *App) LoadSetting() SaveData {
 	log.Default().Println("[DEBUG] [LOG] Load Setting")
-	runtime.EventsEmit(a.ctx, "commonLogOutput", "setting.json Load")
+	logTemplateText := ""
+	logTemplateMetaData := ""
+	logTemplateTitle := "[SYSTEM GO]"
+
+	logTemplateTitle = "setting.json Load"
+	a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 	// 設定ファイルの読み込み
 	file, err := os.ReadFile("setting.json")
 	if err != nil {
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "Setting file read error:"+err.Error())
+		logTemplateTitle = "setting.json Load Error" + err.Error()
+		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 		a.UpdateSetting([]Setting{})
 		return a.SaveData
 	}
@@ -110,41 +138,49 @@ func (a *App) LoadSetting() SaveData {
 	var saveData SaveData
 	err = json.Unmarshal(file, &saveData)
 	if err != nil {
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
+		logTemplateText = "setting.json Unmarshal Error" + err.Error()
+		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 	}
 	log.Default().Println(saveData)
-	runtime.EventsEmit(a.ctx, "commonLogOutput", "Target log folder:"+saveData.LogPath)
-	// a.SaveData.LogPath = saveData.LogPath
+	logTemplateText = "setting.json Loaded Successfully"
+	a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 	a.SaveData = saveData
 	return saveData
 }
 
 func (a *App) UpdateSetting(ss []Setting) {
 	log.Default().Println("[DEBUG] [LOG] UpdateSetting:", len(ss))
+	logTemplateText := ""
+	logTemplateMetaData := ""
+	logTemplateTitle := "[SYSTEM GO]"
 	a.SaveData.Settings = ss
 	// StructをJSONに変換
 	jsonData, err := json.Marshal(a.SaveData)
 	if err != nil {
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
+		logTemplateText = "setting.json Marshal Error" + err.Error()
+		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 	}
-	// runtime.EventsEmit(a.ctx, "commonLogOutput", string(jsonData))
 	// JSONをファイルに書き込む
 	err = os.WriteFile("setting.json", jsonData, 0644)
 	if err != nil {
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
+		logTemplateText = "setting.json Write Error" + err.Error()
+		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 	}
-	// runtime.EventsEmit(a.ctx, "commonLogOutput", "Setting Updated Successfully")
 }
 
 func (a *App) OpenFolderSelectWindow() string {
 	log.Default().Println("[DEBUG] [LOG] OpenFolderSelectWindow")
+	logTemplateText := ""
+	logTemplateMetaData := ""
+	logTemplateTitle := "[SYSTEM GO]"
 	// フォルダ選択ダイアログを開く
 	// 選択されたフォルダのパスを返す
 	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Select LogFile Folder",
 	})
 	if err != nil {
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "ERRPR:"+err.Error())
+		logTemplateText = "OpenFolderSelectWindow Error" + err.Error()
+		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 	}
 	log.Default().Println("[DEBUG] [LOG] Target Path:" + path)
 	// JSONに保存
@@ -168,7 +204,9 @@ func (a *App) OpenFolderSelectWindow() string {
 
 // フォルダ内の最新のtxtファイルを探索し、そのファイル名を返す
 func (a *App) GetNewestFileName(path string) string {
-	// log.Default().Println("[DEBUG] [LOG] GetNewestFileName")
+	logTemplateText := ""
+	logTemplateMetaData := ""
+	logTemplateTitle := "[SYSTEM GO]"
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
@@ -179,7 +217,8 @@ func (a *App) GetNewestFileName(path string) string {
 		if !entry.IsDir() {
 			info, err := entry.Info()
 			if err != nil {
-				runtime.EventsEmit(a.ctx, "commonLogOutput", "ERROR:"+err.Error())
+				logTemplateText = "GetNewestFileName Error" + err.Error()
+				a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 			}
 			// 拡張子が.txtのファイルのみを対象とする
 			if filepath.Ext(entry.Name()) != ".txt" {
@@ -195,7 +234,8 @@ func (a *App) GetNewestFileName(path string) string {
 		}
 	}
 	if newestFile == nil {
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "監視対象のファイルが見つかりませんでした")
+		logTemplateText = "GetNewestFileName Error" + "No File Found"
+		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 		return ""
 	}
 	if newestFile.Name() == a.targetFileName {
@@ -206,10 +246,12 @@ func (a *App) GetNewestFileName(path string) string {
 		a.targetFileName = newestFile.Name()
 		a.ResetOffset() // オフセット削除
 		a.ReadFile()    // 初回内容読み取り
-		runtime.EventsEmit(a.ctx, "commonLogOutput", "Reading log file name:"+a.targetFileName)
+		logTemplateText = "Reading log file name:" + a.targetFileName
+		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 		return newestFile.Name() // Viewへ反映
 	}
-	runtime.EventsEmit(a.ctx, "commonLogOutput", "監視対象のファイルが見つかりませんでした")
+	logTemplateText = "GetNewestFileName Error" + "No File Found"
+	a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 	return ""
 }
 
@@ -217,7 +259,6 @@ var lastOffset int64
 var isWatchFileRunning bool
 
 func (a *App) ResetOffset() {
-	// runtime.EventsEmit(a.ctx, "commonLogOutput", "Reset And Read New File")
 	lastOffset = 0
 }
 
@@ -290,22 +331,22 @@ func (a *App) evaluateLine(line string) {
 				if setting.Exclude == text {
 					continue
 				}
-				a.OutputLog(setting.Title + " : " + text)
+				a.OutputConsoleLog(setting.Title + " : " + text)
 				// setting.Type によって処理を分岐
 				if setting.Type == "WebRequest" {
 					message := a.postHttpRequest(text, setting.Title, setting.URL, setting.RegExp, setting.Details)
-					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
+					a.SendNoticeLog(message, text, setting.Title, true)
 				} else if setting.Type == "SendXSOverlay" {
 					message := a.postXSOverlay(text, setting.Title)
-					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
+					a.SendNoticeLog(message, text, setting.Title, true)
 				} else if setting.Type == "SendDiscordWebHook" {
 					message := postDiscordWebhook(text, setting.Title, setting.URL)
-					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
+					a.SendNoticeLog(message, text, setting.Title, true)
 				} else if setting.Type == "OutputTextFile" {
 					message := outputTextFile(text, setting.Title)
-					runtime.EventsEmit(a.ctx, "commonLogOutput", message)
+					a.SendNoticeLog(message, text, setting.Title, true)
 				} else if setting.Type == "Disable" {
-					runtime.EventsEmit(a.ctx, "commonLogOutput", "[何もしない] "+text)
+					a.SendNoticeLog("[何もしない] "+setting.Title+": "+text, text, setting.Title, true)
 				}
 			}
 		}
@@ -456,5 +497,5 @@ func outputTextFile(eventString string, title string) string {
 	if err != nil {
 		return err.Error()
 	}
-	return "[Log Output] Successfully " + title + ":" + fileName
+	return "[Log Output] Successfully " + title + ":" + filePath
 }
