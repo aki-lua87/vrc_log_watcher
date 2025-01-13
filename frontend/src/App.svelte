@@ -1,10 +1,12 @@
 <script lang="ts">
   import logo from "./assets/images/logo-universal.png";
+  import { ClipboardSetText } from "../wailsjs/runtime";
   import { OpenFolderSelectWindow } from "../wailsjs/go/main/App.js";
   import { GetNewestFileName } from "../wailsjs/go/main/App.js";
   import { PingXSOverlay } from "../wailsjs/go/main/App.js";
   import { UpdateSetting } from "../wailsjs/go/main/App.js";
   import { LoadSetting } from "../wailsjs/go/main/App.js";
+  import { LoadNoticeLog } from "../wailsjs/go/main/App.js";
   import { ReadFile } from "../wailsjs/go/main/App.js";
 
   import Header from "./Header.svelte";
@@ -13,32 +15,38 @@
   import Footer from "./Footer.svelte";
 
   import { main } from "../wailsjs/go/models";
+  import { text } from "svelte/internal";
 
-  let logFileName: string = "";
+  let vrcLogFileName: string = "";
   let intervalId = 0;
   let saveData: main.SaveData;
 
   let contents: main.Setting[] = [];
   let selectedContent: main.Setting | null = null;
-  let logs: string[] = [];
+  let noticeLogs: main.NoticeLog[] = [];
   let idCount = 0;
 
-  window.runtime.EventsOn("commonLogOutput", (eventString) => {
-    logs = [
-      ...logs,
-      `${new Date().toLocaleTimeString()} NOTICE: ${eventString}`,
-    ];
+  window.runtime.EventsOn("commonLogOutput", (noticeLog: main.NoticeLog) => {
+    noticeLogs = [...noticeLogs, noticeLog];
   });
-  window.runtime.EventsOn("pushHttpEvent", (eventString) => {
-    logs = [
-      ...logs,
-      `${new Date().toLocaleTimeString()} POST HTTP REQUEST: ${eventString}`,
-    ];
-  });
+
+  // 使ってない？
+  // window.runtime.EventsOn("pushHttpEvent", (eventString) => {
+  //   logs = [
+  //     ...logs,
+  //     `${new Date().toLocaleTimeString()} POST HTTP REQUEST: ${eventString}`,
+  //   ];
+  // });
 
   init();
   async function init() {
-    logs = [...logs, `${new Date().toLocaleTimeString()} Application start`];
+    await LoadNoticeLog(); // 構造体のロードのためのダミーコール
+    const firstLog = {
+      text: `${new Date().toLocaleTimeString()} Application start`,
+      metaData: "",
+      title: "[SYSTEM TS]",
+    } as main.NoticeLog;
+    noticeLogs = [...noticeLogs, firstLog];
     await LoadSetting().then((result) => (saveData = result));
     contents = saveData.settings;
     if (intervalId != 0) {
@@ -62,7 +70,7 @@
     }
     // ログフォルダ内のファイルを取得する
     await GetNewestFileName(saveData.path).then(
-      (result) => (logFileName = result),
+      (result) => (vrcLogFileName = result),
     );
   }
 
@@ -90,10 +98,12 @@
     contents = [...contents, newContent];
     // 選択を更新
     selectedContent = contents.find((content) => content.id === newContent.id);
-    logs = [
-      ...logs,
-      `${new Date().toLocaleTimeString()} 設定を追加しました: ${newContent.id} ${newContent.title}`,
-    ];
+    const noticeLog = {
+      text: `${new Date().toLocaleTimeString()} 設定を追加しました: ${newContent.id} ${newContent.title}`,
+      metaData: "",
+      title: "[SYSTEM TS]",
+    } as main.NoticeLog;
+    noticeLogs = [...noticeLogs, noticeLog];
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
@@ -122,22 +132,35 @@
     } else {
       selectedContent = null;
     }
-    logs = [
-      ...logs,
-      `${new Date().toLocaleTimeString()} 削除しました: ${deleteContent.id} ${deleteContent.title}`,
-    ];
+    const noticeLog = {
+      text: `${new Date().toLocaleTimeString()} 削除しました: ${deleteContent.id} ${deleteContent.title}`,
+      metaData: "",
+      title: "[SYSTEM TS]",
+    } as main.NoticeLog;
+    noticeLogs = [...noticeLogs, noticeLog];
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
-  function logEvent(customEvent: CustomEvent<string>) {
+  function sendLogEvent(customEvent: CustomEvent<main.NoticeLog>) {
     let event = customEvent.detail;
-    logs = [...logs, event];
+    noticeLogs = [...noticeLogs, event];
+  }
+
+  function clipboardData(customEvent: CustomEvent<string>) {
+    let str = customEvent.detail;
+    ClipboardSetText(str)
+      .then(() => {
+        console.log("success");
+      })
+      .catch((err) => {
+        console.log("fail", err);
+      });
   }
 </script>
 
 <main>
   <div class="flex flex-col h-screen">
-    <Header filename={logFileName} on:getLogFolderPath={getLogFolderPath} />
+    <Header filename={vrcLogFileName} on:getLogFolderPath={getLogFolderPath} />
     <div class="flex flex-1 overflow-hidden">
       <Tabs
         {contents}
@@ -150,10 +173,10 @@
           bind:content={selectedContent}
           on:updateContent={updateContent}
           on:deleteContent={deleteContent}
-          on:logEvent={logEvent}
+          on:logEvent={sendLogEvent}
         />
       {/if}
     </div>
-    <Footer {logs} />
+    <Footer {noticeLogs} on:clipboardData={clipboardData} />
   </div>
 </main>

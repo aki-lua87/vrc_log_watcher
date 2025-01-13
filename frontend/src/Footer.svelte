@@ -1,7 +1,15 @@
-<script>
-    export let logs;
-
+<script lang="ts">
     import { onMount, afterUpdate } from "svelte";
+    // import { main } from "wailsjs/go/models";
+    import { createEventDispatcher } from "svelte";
+
+    const dispatch = createEventDispatcher();
+
+    function ClipboardData(text: string) {
+        dispatch("clipboardData", text);
+    }
+
+    export let noticeLogs = [];
 
     let footerElement;
 
@@ -16,8 +24,18 @@
     bind:this={footerElement}
 >
     <ul class="list-none p-0 m-0">
-        {#each logs as log}
-            <li class="mb-2 text-sm text-rose-50">{log}</li>
+        {#each noticeLogs as noticeLog}
+            <li class="flex items-center mb-2 text-sm text-rose-50">
+                <span>{noticeLog.text}</span>
+                {#if noticeLog.canCopy}
+                    <button
+                        class="ml-2 px-2 py-1 text-xs bg-blue-700 rounded"
+                        on:click={() => ClipboardData(noticeLog.metaData)}
+                    >
+                        Copy
+                    </button>
+                {/if}
+            </li>
         {/each}
     </ul>
 </footer>
