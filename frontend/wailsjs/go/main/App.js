@@ -22,6 +22,10 @@ export function OutputConsoleLog(arg1) {
   return window['go']['main']['App']['OutputConsoleLog'](arg1);
 }
 
+export function OutputErrorLog(arg1, arg2) {
+  return window['go']['main']['App']['OutputErrorLog'](arg1, arg2);
+}
+
 export function PingXSOverlay() {
   return window['go']['main']['App']['PingXSOverlay']();
 }

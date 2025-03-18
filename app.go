@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -25,6 +26,7 @@ type App struct {
 	targetFileName string
 	SaveData       SaveData
 	NoticeLog      NoticeLog
+	appLogFile     *os.File
 }
 
 type NoticeLog struct {
@@ -98,10 +100,71 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.xsWS = nil
 	runtime.LogInfo(ctx, "Application Startup called!")
+
+	// アプリケーションログファイルの初期化
+	a.initAppLogFile()
+}
+
+// アプリケーションログファイルの初期化
+func (a *App) initAppLogFile() {
+	// ログディレクトリの作成
+	logDir := "logs"
+	if _, err := os.Stat(logDir); os.IsNotExist(err) {
+		os.Mkdir(logDir, 0755)
+	}
+
+	// 現在の日時を取得してファイル名に使用
+	currentTime := time.Now().Format("2006-01-02_15-04-05")
+	logFilePath := filepath.Join(logDir, "app_log_"+currentTime+".txt")
+
+	// ログファイルを作成
+	file, err := os.Create(logFilePath)
+	if err != nil {
+		log.Printf("[ERROR] ログファイルの作成に失敗しました: %v", err)
+		return
+	}
+
+	a.appLogFile = file
+
+	// アプリケーション起動ログを書き込む
+	startupMsg := fmt.Sprintf("[%s] アプリケーションを起動しました\n", time.Now().Format("2006/01/02 15:04:05"))
+	a.appLogFile.WriteString(startupMsg)
+}
+
+// アプリケーション終了時にログファイルを閉じる
+func (a *App) shutdown(ctx context.Context) {
+	if a.appLogFile != nil {
+		a.appLogFile.WriteString(fmt.Sprintf("[%s] アプリケーションを終了しました\n", time.Now().Format("2006/01/02 15:04:05")))
+		a.appLogFile.Close()
+	}
 }
 
 func (a *App) OutputConsoleLog(logstring string) {
-	log.Default().Println("[DEBUG] [LOG] OutputLog:" + logstring)
+	logMsg := "[DEBUG] [LOG] OutputLog:" + logstring
+	log.Default().Println(logMsg)
+
+	// ログファイルにも書き込む
+	if a.appLogFile != nil {
+		a.appLogFile.WriteString(fmt.Sprintf("[%s] %s\n", time.Now().Format("2006/01/02 15:04:05"), logMsg))
+	}
+}
+
+// エラーログを出力する関数
+func (a *App) OutputErrorLog(err error, context string) {
+	if err == nil {
+		return
+	}
+
+	errorMsg := fmt.Sprintf("[ERROR] %s: %v", context, err)
+	log.Default().Println(errorMsg)
+
+	// エラーログをアプリケーションログに追加
+	a.SendNoticeLog(errorMsg, "", "[ERROR]", false)
+
+	// ログファイルにも書き込む
+	if a.appLogFile != nil {
+		a.appLogFile.WriteString(fmt.Sprintf("[%s] %s\n", time.Now().Format("2006/01/02 15:04:05"), errorMsg))
+	}
 }
 
 func (a *App) SendNoticeLog(text string, metaData string, title string, canCopy bool) {
@@ -111,6 +174,11 @@ func (a *App) SendNoticeLog(text string, metaData string, title string, canCopy 
 	logTemplate.Title = title
 	logTemplate.CanCopy = canCopy
 	runtime.EventsEmit(a.ctx, "commonLogOutput", logTemplate)
+
+	// ログファイルにも書き込む
+	if a.appLogFile != nil {
+		a.appLogFile.WriteString(fmt.Sprintf("[%s] [%s] %s\n", time.Now().Format("2006/01/02 15:04:05"), title, text))
+	}
 }
 
 // dummy function NOTE: on load ts for models
@@ -207,18 +275,30 @@ func (a *App) GetNewestFileName(path string) string {
 	logTemplateText := ""
 	logTemplateMetaData := ""
 	logTemplateTitle := "[SYSTEM GO]"
+
+	// ログフォルダが指定されていない場合
+	if path == "" {
+		logTemplateText = "ログフォルダが指定されていません。「フォルダを指定」ボタンをクリックしてVRChatのログフォルダを選択してください。"
+		a.SendNoticeLog(logTemplateText, logTemplateMetaData, "[WARNING]", false)
+		return ""
+	}
+
 	entries, err := os.ReadDir(path)
 	if err != nil {
-		log.Fatal(err)
+		errorMsg := fmt.Sprintf("ログフォルダの読み取りに失敗しました: %s", err.Error())
+		a.SendNoticeLog(errorMsg, logTemplateMetaData, "[ERROR]", false)
+		a.OutputErrorLog(err, "ログフォルダの読み取り")
+		return ""
 	}
+
 	var newestFile os.DirEntry
 	var newestTime time.Time
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			info, err := entry.Info()
 			if err != nil {
-				logTemplateText = "GetNewestFileName Error" + err.Error()
-				a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+				a.OutputErrorLog(err, "ファイル情報の取得")
+				continue
 			}
 			// 拡張子が.txtのファイルのみを対象とする
 			if filepath.Ext(entry.Name()) != ".txt" {
@@ -233,14 +313,17 @@ func (a *App) GetNewestFileName(path string) string {
 			}
 		}
 	}
+
 	if newestFile == nil {
-		logTemplateText = "GetNewestFileName Error" + "No File Found"
-		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+		logTemplateText = "ログフォルダ内にログファイル(.txt)が見つかりません。VRChatのログフォルダを正しく指定しているか確認してください。"
+		a.SendNoticeLog(logTemplateText, logTemplateMetaData, "[WARNING]", false)
 		return ""
 	}
+
 	if newestFile.Name() == a.targetFileName {
 		return a.targetFileName // Viewへ反映(別に更新しなくてもいいけど)
 	}
+
 	if newestFile != nil {
 		log.Default().Println("[DEBUG] [LOG] 監視対象を変更します")
 		a.targetFileName = newestFile.Name()
@@ -250,8 +333,7 @@ func (a *App) GetNewestFileName(path string) string {
 		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
 		return newestFile.Name() // Viewへ反映
 	}
-	logTemplateText = "GetNewestFileName Error" + "No File Found"
-	a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+
 	return ""
 }
 
@@ -275,36 +357,42 @@ func (a *App) ReadFile() {
 		log.Default().Println("[DEBUG] [LOG] Watching now")
 		return
 	}
+
 	isWatchFileRunning = true
 	path := a.SaveData.LogPath + "\\" + a.targetFileName
 	file, err := os.Open(path)
 	if err != nil {
-		log.Default().Println("[ERROR] [LOG] ", err.Error())
+		a.OutputErrorLog(err, "ログファイルのオープン")
 		isWatchFileRunning = false
 		return
 	}
 	defer file.Close()
+
 	_, err = file.Seek(lastOffset, 0)
 	if err != nil {
-		log.Default().Println("[ERROR] [LOG] ", err.Error())
+		a.OutputErrorLog(err, "ファイルシーク")
 		isWatchFileRunning = false
 		return
 	}
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		a.evaluateLine(scanner.Text())
 	}
+
 	if err := scanner.Err(); err != nil {
-		log.Default().Println("[ERROR] [LOG] ", err.Error())
+		a.OutputErrorLog(err, "ファイルスキャン")
 		isWatchFileRunning = false
 		return
 	}
+
 	lastOffset, err = file.Seek(0, io.SeekCurrent)
 	if err != nil {
-		log.Default().Println("[ERROR] [LOG] ", err.Error())
+		a.OutputErrorLog(err, "ファイルオフセット取得")
 		isWatchFileRunning = false
 		return
 	}
+
 	isWatchFileRunning = false
 }
 
@@ -361,21 +449,35 @@ func (a *App) postHttpRequest(eventString string, title string, url string, regx
 	if !strings.HasPrefix(url, "http") {
 		return "URL is invalid"
 	}
+
 	data := new(HttpRequestModel)
 	data.Message = eventString
 	data.Title = title
 	data.Description = desc
 	data.Regexp = regx
-	data_json, _ := json.Marshal(data)
+
+	data_json, err := json.Marshal(data)
+	if err != nil {
+		errorMsg := fmt.Sprintf("JSONのマーシャルに失敗しました: %s", err.Error())
+		a.OutputErrorLog(err, "JSONマーシャル")
+		return errorMsg
+	}
+
 	res, err := http.Post(url, "application/json", bytes.NewBuffer(data_json))
 	if err != nil {
-		return err.Error()
+		errorMsg := err.Error()
+		a.OutputErrorLog(err, "HTTPリクエスト")
+		return errorMsg
 	}
 	defer res.Body.Close()
+
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return err.Error()
+		errorMsg := err.Error()
+		a.OutputErrorLog(err, "レスポンス読み取り")
+		return errorMsg
 	}
+
 	log.Default().Println(string(body))
 	return "[Web Request] Sent Successfully: " + title + ": " + eventString
 }

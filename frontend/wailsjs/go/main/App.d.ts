@@ -12,6 +12,8 @@ export function OpenFolderSelectWindow():Promise<string>;
 
 export function OutputConsoleLog(arg1:string):Promise<void>;
 
+export function OutputErrorLog(arg1:Error,arg2:string):Promise<void>;
+
 export function PingXSOverlay():Promise<void>;
 
 export function ReadFile():Promise<void>;
