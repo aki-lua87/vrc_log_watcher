@@ -158,10 +158,10 @@
   }
 </script>
 
-<main>
+<main class="bg-dark-200 text-white min-h-screen">
   <div class="flex flex-col h-screen">
     <Header filename={vrcLogFileName} on:getLogFolderPath={getLogFolderPath} />
-    <div class="flex flex-1 overflow-hidden">
+    <div class="flex flex-1 overflow-hidden p-2 gap-3">
       <Tabs
         {contents}
         on:selectContent={selectContent}
@@ -175,6 +175,19 @@
           on:deleteContent={deleteContent}
           on:logEvent={sendLogEvent}
         />
+      {:else}
+        <div class="flex-grow flex items-center justify-center bg-dark-100 rounded-lg shadow-card">
+          <div class="text-center p-6">
+            <h2 class="text-xl font-bold mb-2">設定が選択されていません</h2>
+            <p class="text-gray-400 mb-4">左側のタブから設定を選択するか、新しい設定を追加してください</p>
+            <button 
+              class="bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg transition-all duration-200 shadow-md"
+              on:click={addContent}
+            >
+              新しい設定を追加
+            </button>
+          </div>
+        </div>
       {/if}
     </div>
     <Footer {noticeLogs} on:clipboardData={clipboardData} />
