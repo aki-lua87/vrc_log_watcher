@@ -66,6 +66,14 @@
 
   async function getLogFiles() {
     if (saveData.path == undefined || saveData.path == "") {
+      // ログフォルダが指定されていない場合は警告を表示
+      const noticeLog = {
+        text: `ログフォルダが指定されていません。「フォルダを指定」ボタンをクリックしてVRChatのログフォルダを選択してください。`,
+        metaData: "",
+        title: "[WARNING]",
+        canCopy: false
+      } as main.NoticeLog;
+      noticeLogs = [...noticeLogs, noticeLog];
       return;
     }
     // ログフォルダ内のファイルを取得する
