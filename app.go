@@ -375,7 +375,13 @@ func (a *App) ReadFile() {
 		return
 	}
 
+	// スキャナーのバッファサイズを増やす（デフォルトは64KB）
 	scanner := bufio.NewScanner(file)
+	// 10MBのバッファを確保
+	const maxCapacity = 10 * 1024 * 1024 // 10MB
+	buf := make([]byte, maxCapacity)
+	scanner.Buffer(buf, maxCapacity)
+	
 	for scanner.Scan() {
 		a.evaluateLine(scanner.Text())
 	}
