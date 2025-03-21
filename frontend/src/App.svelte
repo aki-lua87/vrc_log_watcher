@@ -149,6 +149,29 @@
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
+  // 設定の順序変更を処理する関数
+  async function handleReorderContents(customEvent: CustomEvent<main.Setting[]>) {
+    // 新しい順序の設定配列を取得
+    const newContents = customEvent.detail;
+    // 設定配列を更新
+    contents = newContents;
+    // 選択中の設定が存在する場合、選択状態を維持
+    if (selectedContent) {
+      selectedContent = contents.find(
+        (content) => content.id === selectedContent.id
+      );
+    }
+    // バックエンドに保存
+    await UpdateSetting(contents).then((result) => console.log(result));
+    // ログに記録
+    const noticeLog = {
+      text: `${new Date().toLocaleTimeString()} 設定の順序を変更しました`,
+      metaData: "",
+      title: "[SYSTEM TS]",
+    } as main.NoticeLog;
+    noticeLogs = [...noticeLogs, noticeLog];
+  }
+
   function sendLogEvent(customEvent: CustomEvent<main.NoticeLog>) {
     let event = customEvent.detail;
     noticeLogs = [...noticeLogs, event];
@@ -174,6 +197,7 @@
         {contents}
         on:selectContent={selectContent}
         on:addContent={addContent}
+        on:reorderContents={handleReorderContents}
       />
 
       {#if selectedContent}
