@@ -3,12 +3,78 @@
     export let contents;
     const dispatch = createEventDispatcher();
 
+    // ドラッグ関連の状態
+    let draggedItem = null;
+    let draggedOverItem = null;
+
     function handleSelectContent(content) {
         dispatch("selectContent", content);
     }
 
     function handleAddContent() {
         dispatch("addContent");
+    }
+
+    // ドラッグ開始時のイベントハンドラ
+    function handleDragStart(event, content) {
+        draggedItem = content;
+        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.setData("text/plain", content.id);
+        // ドラッグ中の要素のスタイルを設定
+        event.target.classList.add("dragging");
+    }
+
+    // ドラッグ終了時のイベントハンドラ
+    function handleDragEnd(event) {
+        // ドラッグ中のスタイルをリセット
+        event.target.classList.remove("dragging");
+        draggedItem = null;
+        draggedOverItem = null;
+    }
+
+    // ドラッグオーバー時のイベントハンドラ
+    function handleDragOver(event, content) {
+        event.preventDefault();
+        if (draggedItem && draggedItem.id !== content.id) {
+            draggedOverItem = content;
+        }
+    }
+
+    // ドロップ時のイベントハンドラ
+    function handleDrop(event, targetContent) {
+        event.preventDefault();
+        if (!draggedItem || draggedItem.id === targetContent.id) return;
+
+        // 元の配列のインデックスを取得
+        const draggedIndex = contents.findIndex(item => item.id === draggedItem.id);
+        const targetIndex = contents.findIndex(item => item.id === targetContent.id);
+        
+        if (draggedIndex !== -1 && targetIndex !== -1) {
+            // 配列から要素を削除して新しい位置に挿入
+            const newContents = [...contents];
+            const [removed] = newContents.splice(draggedIndex, 1);
+            newContents.splice(targetIndex, 0, removed);
+            
+            // 親コンポーネントに順序変更を通知
+            dispatch("reorderContents", newContents);
+        }
+        
+        // ドラッグ状態をリセット
+        draggedItem = null;
+        draggedOverItem = null;
+    }
+
+    // ドラッグエンター時のイベントハンドラ
+    function handleDragEnter(event, content) {
+        if (draggedItem && draggedItem.id !== content.id) {
+            draggedOverItem = content;
+            event.target.classList.add("drag-over");
+        }
+    }
+
+    // ドラッグリーブ時のイベントハンドラ
+    function handleDragLeave(event) {
+        event.target.classList.remove("drag-over");
     }
 
     // 設定タイプに基づいてアイコンを取得する関数
@@ -73,6 +139,15 @@
             <button
                 class="w-full flex items-center text-left p-3 rounded-lg hover:bg-dark-200 transition-all duration-200 group border border-transparent hover:border-primary-700"
                 on:click={() => handleSelectContent(content)}
+                draggable="true"
+                on:dragstart={(e) => handleDragStart(e, content)}
+                on:dragend={handleDragEnd}
+                on:dragover={(e) => handleDragOver(e, content)}
+                on:drop={(e) => handleDrop(e, content)}
+                on:dragenter={(e) => handleDragEnter(e, content)}
+                on:dragleave={handleDragLeave}
+                class:dragging={draggedItem && draggedItem.id === content.id}
+                class:drag-over={draggedOverItem && draggedOverItem.id === content.id}
             >
                 <div
                     class="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-primary-800 rounded-md text-white mr-3"
@@ -116,3 +191,18 @@
         </div>
     {/if}
 </nav>
+
+<style>
+    /* ドラッグ中の要素のスタイル */
+    .dragging {
+        opacity: 0.5;
+        border: 2px dashed #4f46e5 !important;
+        background-color: rgba(79, 70, 229, 0.1) !important;
+    }
+
+    /* ドラッグオーバー中の要素のスタイル */
+    .drag-over {
+        border: 2px dashed #4f46e5 !important;
+        background-color: rgba(79, 70, 229, 0.1) !important;
+    }
+</style>
