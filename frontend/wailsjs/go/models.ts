@@ -29,6 +29,8 @@ export namespace main {
 	    url: string;
 	    regexp: string;
 	    exclude: string;
+	    messageKey: string;
+	    extraFields: {[key: string]: string};
 	
 	    static createFrom(source: any = {}) {
 	        return new Setting(source);
@@ -44,6 +46,8 @@ export namespace main {
 	        this.url = source["url"];
 	        this.regexp = source["regexp"];
 	        this.exclude = source["exclude"];
+	        this.messageKey = source["messageKey"];
+	        this.extraFields = source["extraFields"];
 	    }
 	}
 	export class SaveData {

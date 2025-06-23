@@ -17,6 +17,39 @@
         dispatch("deleteContent", content);
     }
 
+    // 追加フィールドの管理関数
+    function addExtraField() {
+        if (!content.extraFields) {
+            content.extraFields = {};
+        }
+        const newKey = `field${Object.keys(content.extraFields).length + 1}`;
+        content.extraFields[newKey] = "";
+        updateContent("extraFields", content.extraFields);
+    }
+
+    function updateExtraField(oldKey, newKey, newValue) {
+        if (!content.extraFields) {
+            content.extraFields = {};
+        }
+        
+        // キー名が変更された場合
+        if (oldKey !== newKey) {
+            delete content.extraFields[oldKey];
+            content.extraFields[newKey] = newValue;
+        } else {
+            // 値のみ変更された場合
+            content.extraFields[oldKey] = newValue;
+        }
+        updateContent("extraFields", content.extraFields);
+    }
+
+    function removeExtraField(key) {
+        if (content.extraFields) {
+            delete content.extraFields[key];
+            updateContent("extraFields", content.extraFields);
+        }
+    }
+
     // イベントタイプに基づいてアイコンを取得する関数
     function getTypeIcon(type) {
         switch (type) {
@@ -231,6 +264,119 @@
                     {content.type === "WebRequest"
                         ? "POSTリクエストを送信するURL"
                         : "Discord WebhookのURL"}
+                </p>
+            </div>
+        {/if}
+
+        {#if content.type === "WebRequest"}
+            <div class="space-y-2">
+                <label
+                    class="block text-sm font-medium text-gray-300"
+                    for="messagekey-input"
+                >
+                    <div class="flex items-center">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4 mr-1 text-primary-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-3a1 1 0 011-1h2.586l6.414-6.414a6 6 0 017.743-5.743z"
+                            />
+                        </svg>
+                        メッセージキー名
+                    </div>
+                </label>
+                <input
+                    id="messagekey-input"
+                    type="text"
+                    placeholder="message"
+                    bind:value={content.messageKey}
+                    on:change={(e) => handleInput(e, "messageKey")}
+                    class="w-full p-3 bg-dark-200 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 font-mono"
+                />
+                <p class="text-xs text-gray-500">
+                    JSONペイロードでログメッセージを送信するキー名（空白の場合は"message"を使用）
+                </p>
+            </div>
+
+            <div class="space-y-2">
+                <label class="block text-sm font-medium text-gray-300">
+                    <div class="flex items-center">
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4 mr-1 text-primary-400"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 100 4m0-4v2m0-6V4"
+                            />
+                        </svg>
+                        追加フィールド
+                    </div>
+                </label>
+                <div class="space-y-2">
+                    {#if content.extraFields && Object.keys(content.extraFields).length > 0}
+                        {#each Object.entries(content.extraFields) as [key, value], index}
+                            <div class="flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="キー名"
+                                    value={key}
+                                    on:change={(e) => updateExtraField(key, e.target.value, value)}
+                                    class="flex-1 p-2 bg-dark-200 border border-gray-700 rounded text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200 font-mono"
+                                />
+                                <input
+                                    type="text"
+                                    placeholder="値"
+                                    value={value}
+                                    on:change={(e) => updateExtraField(key, key, e.target.value)}
+                                    class="flex-1 p-2 bg-dark-200 border border-gray-700 rounded text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                                />
+                                <button
+                                    type="button"
+                                    on:click={() => removeExtraField(key)}
+                                    class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded transition-all duration-200"
+                                >
+                                    削除
+                                </button>
+                            </div>
+                        {/each}
+                    {/if}
+                    <button
+                        type="button"
+                        on:click={addExtraField}
+                        class="w-full p-2 bg-primary-600 hover:bg-primary-700 text-white rounded transition-all duration-200 flex items-center justify-center"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-4 w-4 mr-1"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                            />
+                        </svg>
+                        フィールドを追加
+                    </button>
+                </div>
+                <p class="text-xs text-gray-500">
+                    リクエストに追加で送信するキーと値のペア
                 </p>
             </div>
         {/if}

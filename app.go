@@ -43,12 +43,6 @@ type SaveData struct {
 	Settings []Setting `json:"settings"`
 }
 
-type HttpRequestModel struct {
-	Message     string `json:"message"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
-	Regexp      string `json:"regexp"`
-}
 
 type XSOApiObject struct {
 	Sender   string `json:"sender"`
@@ -82,14 +76,16 @@ type XSONotificationObject struct {
 
 
 type Setting struct {
-	ID      string `json:"id"`
-	Title   string `json:"title"`
-	Details string `json:"details"`
-	Target  string `json:"target"`
-	Type    string `json:"type"`
-	URL     string `json:"url"`
-	RegExp  string `json:"regexp"`
-	Exclude string `json:"exclude"`
+	ID           string            `json:"id"`
+	Title        string            `json:"title"`
+	Details      string            `json:"details"`
+	Target       string            `json:"target"`
+	Type         string            `json:"type"`
+	URL          string            `json:"url"`
+	RegExp       string            `json:"regexp"`
+	Exclude      string            `json:"exclude"`
+	MessageKey   string            `json:"messageKey"`   // メッセージのキー名
+	ExtraFields  map[string]string `json:"extraFields"` // 追加フィールド
 }
 
 func NewApp() *App {
@@ -434,7 +430,7 @@ func (a *App) evaluateLine(line string) {
 				a.OutputConsoleLog(setting.Title + " : " + text)
 				// setting.Type によって処理を分岐
 				if setting.Type == "WebRequest" {
-					message := a.postHttpRequest(text, setting.Title, setting.URL, setting.RegExp, setting.Details)
+					message := a.postHttpRequest(text, setting)
 					a.SendNoticeLog(message, text, setting.Title, true)
 				} else if setting.Type == "SendXSOverlay" {
 					message := a.postXSOverlay(text, setting.Title)
@@ -453,20 +449,31 @@ func (a *App) evaluateLine(line string) {
 	}
 }
 
-func (a *App) postHttpRequest(eventString string, title string, url string, regx string, desc string) string {
-	if url == "" {
+func (a *App) postHttpRequest(eventString string, setting Setting) string {
+	if setting.URL == "" {
 		return "URL is empty"
 	}
 	// url形式じゃない場合の処理
-	if !strings.HasPrefix(url, "http") {
+	if !strings.HasPrefix(setting.URL, "http") {
 		return "URL is invalid"
 	}
 
-	data := new(HttpRequestModel)
-	data.Message = eventString
-	data.Title = title
-	data.Description = desc
-	data.Regexp = regx
+	// 動的にJSONペイロードを構築
+	data := make(map[string]interface{})
+	
+	// メッセージキーが指定されていない場合はデフォルトで"message"を使用
+	messageKey := setting.MessageKey
+	if messageKey == "" {
+		messageKey = "message"
+	}
+	data[messageKey] = eventString
+
+	// 追加フィールドを設定
+	if setting.ExtraFields != nil {
+		for key, value := range setting.ExtraFields {
+			data[key] = value
+		}
+	}
 
 	data_json, err := json.Marshal(data)
 	if err != nil {
@@ -475,7 +482,7 @@ func (a *App) postHttpRequest(eventString string, title string, url string, regx
 		return errorMsg
 	}
 
-	res, err := http.Post(url, "application/json", bytes.NewBuffer(data_json))
+	res, err := http.Post(setting.URL, "application/json", bytes.NewBuffer(data_json))
 	if err != nil {
 		errorMsg := err.Error()
 		a.OutputErrorLog(err, "HTTPリクエスト")
@@ -491,7 +498,7 @@ func (a *App) postHttpRequest(eventString string, title string, url string, regx
 	}
 
 	log.Default().Println(string(body))
-	return "[Web Request] Sent Successfully: " + title + ": " + eventString
+	return "[Web Request] Sent Successfully: " + setting.Title + ": " + eventString
 }
 
 func (a *App) PingXSOverlay() {
