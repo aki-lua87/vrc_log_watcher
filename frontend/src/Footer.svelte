@@ -1,6 +1,7 @@
 <script lang="ts">
     import { onMount, afterUpdate } from "svelte";
     import { createEventDispatcher } from "svelte";
+    import { GetLastLogTime } from "../wailsjs/go/main/App";
 
     const dispatch = createEventDispatcher();
 
@@ -174,6 +175,9 @@
                         <span class="font-medium text-xs text-primary-300"
                             >{noticeLog.title}</span
                         >
+                        {#if noticeLog.timestamp}
+                            <span class="text-xs text-gray-500 ml-2">{noticeLog.timestamp}</span>
+                        {/if}
                     </div>
                     <p class="text-sm break-words">{noticeLog.text}</p>
                 </div>

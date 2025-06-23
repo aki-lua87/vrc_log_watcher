@@ -44,7 +44,7 @@
     const firstLog = {
       text: `${new Date().toLocaleTimeString()} Application start`,
       metaData: "",
-      title: "[SYSTEM TS]",
+      title: "[SYSTEM]",
     } as main.NoticeLog;
     noticeLogs = [...noticeLogs, firstLog];
     await LoadSetting().then((result) => (saveData = result));
@@ -109,7 +109,7 @@
     const noticeLog = {
       text: `${new Date().toLocaleTimeString()} 設定を追加しました: ${newContent.id} ${newContent.title}`,
       metaData: "",
-      title: "[SYSTEM TS]",
+      title: "[SYSTEM]",
     } as main.NoticeLog;
     noticeLogs = [...noticeLogs, noticeLog];
     await UpdateSetting(contents).then((result) => console.log(result));
@@ -143,14 +143,16 @@
     const noticeLog = {
       text: `${new Date().toLocaleTimeString()} 削除しました: ${deleteContent.id} ${deleteContent.title}`,
       metaData: "",
-      title: "[SYSTEM TS]",
+      title: "[SYSTEM]",
     } as main.NoticeLog;
     noticeLogs = [...noticeLogs, noticeLog];
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
   // 設定の順序変更を処理する関数
-  async function handleReorderContents(customEvent: CustomEvent<main.Setting[]>) {
+  async function handleReorderContents(
+    customEvent: CustomEvent<main.Setting[]>,
+  ) {
     // 新しい順序の設定配列を取得
     const newContents = customEvent.detail;
     // 設定配列を更新
@@ -158,7 +160,7 @@
     // 選択中の設定が存在する場合、選択状態を維持
     if (selectedContent) {
       selectedContent = contents.find(
-        (content) => content.id === selectedContent.id
+        (content) => content.id === selectedContent.id,
       );
     }
     // バックエンドに保存
@@ -167,7 +169,7 @@
     const noticeLog = {
       text: `${new Date().toLocaleTimeString()} 設定の順序を変更しました`,
       metaData: "",
-      title: "[SYSTEM TS]",
+      title: "[SYSTEM]",
     } as main.NoticeLog;
     noticeLogs = [...noticeLogs, noticeLog];
   }

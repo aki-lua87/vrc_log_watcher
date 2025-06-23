@@ -27,13 +27,15 @@ type App struct {
 	SaveData       SaveData
 	NoticeLog      NoticeLog
 	appLogFile     *os.File
+	lastLogTime    string
 }
 
 type NoticeLog struct {
-	Text     string `json:"text"`
-	MetaData string `json:"metaData"`
-	Title    string `json:"title"`
-	CanCopy  bool   `json:"canCopy"`
+	Text      string `json:"text"`
+	MetaData  string `json:"metaData"`
+	Title     string `json:"title"`
+	CanCopy   bool   `json:"canCopy"`
+	Timestamp string `json:"timestamp"`
 }
 
 type SaveData struct {
@@ -173,6 +175,7 @@ func (a *App) SendNoticeLog(text string, metaData string, title string, canCopy 
 	logTemplate.MetaData = metaData
 	logTemplate.Title = title
 	logTemplate.CanCopy = canCopy
+	logTemplate.Timestamp = a.lastLogTime
 	runtime.EventsEmit(a.ctx, "commonLogOutput", logTemplate)
 
 	// ログファイルにも書き込む
@@ -186,11 +189,16 @@ func (a *App) LoadNoticeLog() NoticeLog {
 	return a.NoticeLog
 }
 
+// 最新のVRCログ時刻を取得
+func (a *App) GetLastLogTime() string {
+	return a.lastLogTime
+}
+
 func (a *App) LoadSetting() SaveData {
 	log.Default().Println("[DEBUG] [LOG] Load Setting")
 	logTemplateText := ""
 	logTemplateMetaData := ""
-	logTemplateTitle := "[SYSTEM GO]"
+	logTemplateTitle := "[SYSTEM]"
 
 	logTemplateTitle = "setting.json Load"
 	a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
@@ -220,7 +228,7 @@ func (a *App) UpdateSetting(ss []Setting) {
 	log.Default().Println("[DEBUG] [LOG] UpdateSetting:", len(ss))
 	logTemplateText := ""
 	logTemplateMetaData := ""
-	logTemplateTitle := "[SYSTEM GO]"
+	logTemplateTitle := "[SYSTEM]"
 	a.SaveData.Settings = ss
 	// StructをJSONに変換
 	jsonData, err := json.Marshal(a.SaveData)
@@ -240,7 +248,7 @@ func (a *App) OpenFolderSelectWindow() string {
 	log.Default().Println("[DEBUG] [LOG] OpenFolderSelectWindow")
 	logTemplateText := ""
 	logTemplateMetaData := ""
-	logTemplateTitle := "[SYSTEM GO]"
+	logTemplateTitle := "[SYSTEM]"
 	// フォルダ選択ダイアログを開く
 	// 選択されたフォルダのパスを返す
 	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
@@ -274,7 +282,7 @@ func (a *App) OpenFolderSelectWindow() string {
 func (a *App) GetNewestFileName(path string) string {
 	logTemplateText := ""
 	logTemplateMetaData := ""
-	logTemplateTitle := "[SYSTEM GO]"
+	logTemplateTitle := "[SYSTEM]"
 
 	// ログフォルダが指定されていない場合
 	if path == "" {
@@ -402,8 +410,21 @@ func (a *App) ReadFile() {
 	isWatchFileRunning = false
 }
 
+// VRCログから時刻を抽出
+func (a *App) extractTimeFromVRCLog(line string) {
+	// VRCログの時刻形式: "2025.06.23 10:53:50"
+	timePattern := regexp.MustCompile(`^(\d{4}\.\d{2}\.\d{2} \d{2}:\d{2}:\d{2})`)
+	matches := timePattern.FindStringSubmatch(line)
+	if len(matches) > 1 {
+		a.lastLogTime = matches[1]
+	}
+}
+
 // 行の評価
 func (a *App) evaluateLine(line string) {
+	// VRCログから時刻を抽出
+	a.extractTimeFromVRCLog(line)
+	
 	if lastOffset == 0 {
 		return
 	}

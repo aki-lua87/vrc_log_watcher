@@ -5,6 +5,7 @@ export namespace main {
 	    metaData: string;
 	    title: string;
 	    canCopy: boolean;
+	    timestamp: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new NoticeLog(source);
@@ -16,6 +17,7 @@ export namespace main {
 	        this.metaData = source["metaData"];
 	        this.title = source["title"];
 	        this.canCopy = source["canCopy"];
+	        this.timestamp = source["timestamp"];
 	    }
 	}
 	export class Setting {
