@@ -11,15 +11,60 @@
     export let noticeLogs = [];
 
     let footerElement;
-    let isExpanded = false;
+    let footerHeight = 150; // デフォルトの高さ
+    let isDragging = false;
+    let startY = 0;
+    let startHeight = 0;
+    let minHeight = 100; // 最小の高さ
+    let maxHeight = 500; // 最大の高さ
 
     // afterUpdateライフサイクルを使用してフッターが更新された後にスクロール
     afterUpdate(() => {
         footerElement.scrollTop = footerElement.scrollHeight;
     });
 
-    function toggleExpand() {
-        isExpanded = !isExpanded;
+    // ドラッグ開始時の処理
+    function handleMouseDown(event) {
+        isDragging = true;
+        startY = event.clientY;
+        startHeight = footerHeight;
+        
+        // グローバルイベントリスナーを追加
+        window.addEventListener('mousemove', handleMouseMove);
+        window.addEventListener('mouseup', handleMouseUp);
+        
+        // カーソルスタイルを変更
+        document.body.style.cursor = 'ns-resize';
+        event.preventDefault();
+    }
+
+    // ドラッグ中の処理
+    function handleMouseMove(event) {
+        if (!isDragging) return;
+        
+        // マウスの移動量を計算（上方向にドラッグすると高さが増加）
+        const deltaY = startY - event.clientY;
+        let newHeight = startHeight + deltaY;
+        
+        // 高さの制限を適用
+        newHeight = Math.max(minHeight, Math.min(newHeight, maxHeight));
+        
+        // 高さを更新
+        footerHeight = newHeight;
+        
+        event.preventDefault();
+    }
+
+    // ドラッグ終了時の処理
+    function handleMouseUp() {
+        isDragging = false;
+        
+        // グローバルイベントリスナーを削除
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+        
+        // カーソルスタイルを元に戻す
+        document.body.style.cursor = 'default';
     }
 
     // ログの種類に基づいてアイコンとカラーを取得
@@ -70,12 +115,20 @@
     }
 </script>
 
-<footer
-    class="{isExpanded
-        ? 'h-[300px]'
-        : 'h-[150px]'} transition-all duration-300 ease-in-out p-4 bg-dark-100 overflow-y-auto text-left relative shadow-lg"
-    bind:this={footerElement}
->
+<div class="footer-container">
+    <!-- ドラッグハンドル -->
+    <div 
+        class="h-2 bg-dark-100 hover:bg-primary-500 cursor-ns-resize z-10 flex items-center justify-center sticky top-0"
+        on:mousedown={handleMouseDown}
+    >
+        <div class="w-10 h-1 bg-gray-500 rounded-full"></div>
+    </div>
+
+    <footer
+        class="transition-all duration-300 ease-in-out p-4 bg-dark-100 overflow-y-auto text-left relative shadow-lg"
+        style="height: {footerHeight}px;"
+        bind:this={footerElement}
+    >
     <div class="flex justify-between items-center mb-2">
         <h3 class="text-sm font-semibold text-white flex items-center">
             <svg
@@ -94,42 +147,6 @@
             </svg>
             アプリケーションログ
         </h3>
-        <button
-            class="text-gray-400 hover:text-white transition-colors duration-200"
-            on:click={toggleExpand}
-        >
-            {#if isExpanded}
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M19 9l-7 7-7-7"
-                    />
-                </svg>
-            {:else}
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    class="h-5 w-5"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M5 15l7-7 7 7"
-                    />
-                </svg>
-            {/if}
-        </button>
     </div>
 
     <div class="space-y-2">
@@ -192,3 +209,4 @@
         {/if}
     </div>
 </footer>
+</div>
