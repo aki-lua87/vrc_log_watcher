@@ -498,6 +498,14 @@ func (a *App) postHttpRequest(eventString string, setting Setting) string {
 	}
 
 	log.Default().Println(string(body))
+
+	// HTTPステータスコードをチェック
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		errorMsg := fmt.Sprintf("[Web Request] HTTP Error %d: %s - Response: %s", res.StatusCode, res.Status, string(body))
+		a.OutputErrorLog(fmt.Errorf("HTTP %d: %s", res.StatusCode, res.Status), "HTTPレスポンスエラー")
+		return errorMsg
+	}
+
 	return "[Web Request] Sent Successfully: " + setting.Title + ": " + eventString
 }
 
