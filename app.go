@@ -80,8 +80,6 @@ type XSONotificationObject struct {
 	// Opacity       float32 `json:"opacity"`
 }
 
-type LogOutputModel struct {
-}
 
 type Setting struct {
 	ID      string `json:"id"`
@@ -194,19 +192,23 @@ func (a *App) GetLastLogTime() string {
 	return a.lastLogTime
 }
 
+// ログヘルパー関数
+func (a *App) sendSystemLog(text, title string) {
+	a.SendNoticeLog(text, "", title, false)
+}
+
+func (a *App) sendSystemError(text, title string) {
+	a.SendNoticeLog(text, "", title, false)
+}
+
 func (a *App) LoadSetting() SaveData {
 	log.Default().Println("[DEBUG] [LOG] Load Setting")
-	logTemplateText := ""
-	logTemplateMetaData := ""
-	logTemplateTitle := "[SYSTEM]"
 
-	logTemplateTitle = "setting.json Load"
-	a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+	a.sendSystemLog("", "setting.json Load")
 	// 設定ファイルの読み込み
 	file, err := os.ReadFile("setting.json")
 	if err != nil {
-		logTemplateTitle = "setting.json Load Error" + err.Error()
-		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+		a.sendSystemError("", "setting.json Load Error"+err.Error())
 		a.UpdateSetting([]Setting{})
 		return a.SaveData
 	}
@@ -214,49 +216,38 @@ func (a *App) LoadSetting() SaveData {
 	var saveData SaveData
 	err = json.Unmarshal(file, &saveData)
 	if err != nil {
-		logTemplateText = "setting.json Unmarshal Error" + err.Error()
-		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+		a.sendSystemError("", "setting.json Unmarshal Error"+err.Error())
 	}
 	log.Default().Println(saveData)
-	logTemplateText = "setting.json Loaded Successfully"
-	a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+	a.sendSystemLog("", "setting.json Loaded Successfully")
 	a.SaveData = saveData
 	return saveData
 }
 
 func (a *App) UpdateSetting(ss []Setting) {
 	log.Default().Println("[DEBUG] [LOG] UpdateSetting:", len(ss))
-	logTemplateText := ""
-	logTemplateMetaData := ""
-	logTemplateTitle := "[SYSTEM]"
 	a.SaveData.Settings = ss
 	// StructをJSONに変換
 	jsonData, err := json.Marshal(a.SaveData)
 	if err != nil {
-		logTemplateText = "setting.json Marshal Error" + err.Error()
-		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+		a.sendSystemError("", "setting.json Marshal Error"+err.Error())
 	}
 	// JSONをファイルに書き込む
 	err = os.WriteFile("setting.json", jsonData, 0644)
 	if err != nil {
-		logTemplateText = "setting.json Write Error" + err.Error()
-		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+		a.sendSystemError("", "setting.json Write Error"+err.Error())
 	}
 }
 
 func (a *App) OpenFolderSelectWindow() string {
 	log.Default().Println("[DEBUG] [LOG] OpenFolderSelectWindow")
-	logTemplateText := ""
-	logTemplateMetaData := ""
-	logTemplateTitle := "[SYSTEM]"
 	// フォルダ選択ダイアログを開く
 	// 選択されたフォルダのパスを返す
 	path, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Select LogFile Folder",
 	})
 	if err != nil {
-		logTemplateText = "OpenFolderSelectWindow Error" + err.Error()
-		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+		a.sendSystemError("", "OpenFolderSelectWindow Error"+err.Error())
 	}
 	log.Default().Println("[DEBUG] [LOG] Target Path:" + path)
 	// JSONに保存
@@ -280,21 +271,17 @@ func (a *App) OpenFolderSelectWindow() string {
 
 // フォルダ内の最新のtxtファイルを探索し、そのファイル名を返す
 func (a *App) GetNewestFileName(path string) string {
-	logTemplateText := ""
-	logTemplateMetaData := ""
-	logTemplateTitle := "[SYSTEM]"
 
 	// ログフォルダが指定されていない場合
 	if path == "" {
-		logTemplateText = "ログフォルダが指定されていません。「フォルダを指定」ボタンをクリックしてVRChatのログフォルダを選択してください。"
-		a.SendNoticeLog(logTemplateText, logTemplateMetaData, "[WARNING]", false)
+		a.sendSystemLog("ログフォルダが指定されていません。「フォルダを指定」ボタンをクリックしてVRChatのログフォルダを選択してください。", "[WARNING]")
 		return ""
 	}
 
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		errorMsg := fmt.Sprintf("ログフォルダの読み取りに失敗しました: %s", err.Error())
-		a.SendNoticeLog(errorMsg, logTemplateMetaData, "[ERROR]", false)
+		a.sendSystemError(errorMsg, "[ERROR]")
 		a.OutputErrorLog(err, "ログフォルダの読み取り")
 		return ""
 	}
@@ -323,8 +310,7 @@ func (a *App) GetNewestFileName(path string) string {
 	}
 
 	if newestFile == nil {
-		logTemplateText = "ログフォルダ内にログファイル(.txt)が見つかりません。VRChatのログフォルダを正しく指定しているか確認してください。"
-		a.SendNoticeLog(logTemplateText, logTemplateMetaData, "[WARNING]", false)
+		a.sendSystemLog("ログフォルダ内にログファイル(.txt)が見つかりません。VRChatのログフォルダを正しく指定しているか確認してください。", "[WARNING]")
 		return ""
 	}
 
@@ -337,8 +323,7 @@ func (a *App) GetNewestFileName(path string) string {
 		a.targetFileName = newestFile.Name()
 		a.ResetOffset() // オフセット削除
 		a.ReadFile()    // 初回内容読み取り
-		logTemplateText = "Reading log file name:" + a.targetFileName
-		a.SendNoticeLog(logTemplateText, logTemplateMetaData, logTemplateTitle, false)
+		a.sendSystemLog("Reading log file name:"+a.targetFileName, "[SYSTEM]")
 		return newestFile.Name() // Viewへ反映
 	}
 
