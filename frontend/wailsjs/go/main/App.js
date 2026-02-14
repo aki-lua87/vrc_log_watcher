@@ -10,6 +10,10 @@ export function GetNewestFileName(arg1) {
   return window['go']['main']['App']['GetNewestFileName'](arg1);
 }
 
+export function GetOutputFolderPath(arg1) {
+  return window['go']['main']['App']['GetOutputFolderPath'](arg1);
+}
+
 export function LoadNoticeLog() {
   return window['go']['main']['App']['LoadNoticeLog']();
 }
@@ -18,8 +22,20 @@ export function LoadSetting() {
   return window['go']['main']['App']['LoadSetting']();
 }
 
+export function OpenFile(arg1) {
+  return window['go']['main']['App']['OpenFile'](arg1);
+}
+
+export function OpenFileInExplorer(arg1) {
+  return window['go']['main']['App']['OpenFileInExplorer'](arg1);
+}
+
 export function OpenFolderSelectWindow() {
   return window['go']['main']['App']['OpenFolderSelectWindow']();
+}
+
+export function OpenInExplorer(arg1) {
+  return window['go']['main']['App']['OpenInExplorer'](arg1);
 }
 
 export function OutputConsoleLog(arg1) {
@@ -44,6 +60,10 @@ export function ResetOffset() {
 
 export function SendNoticeLog(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SendNoticeLog'](arg1, arg2, arg3, arg4);
+}
+
+export function SendNoticeLogWithID(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['SendNoticeLogWithID'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function UpdateSetting(arg1) {

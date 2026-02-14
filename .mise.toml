@@ -1,0 +1,28 @@
+[tools]
+go = "1.22.2"
+node = "20.19.5"
+pnpm = "9.15.9"
+
+[tasks.dev]
+description = "Run Wails in development mode"
+run = "wails dev"
+
+[tasks.build]
+description = "Build Wails application"
+run = "wails build"
+
+[tasks."build:prod"]
+description = "Build Wails application for production"
+run = "wails build -clean"
+
+[tasks."update-wails"]
+description = "Update Wails CLI to latest version"
+run = "go install github.com/wailsapp/wails/v2/cmd/wails@latest"
+
+[tasks.doctor]
+description = "Check development environment setup"
+run = "wails doctor"
+
+[tasks.version]
+description = "Show Wails version"
+run = "wails version"
