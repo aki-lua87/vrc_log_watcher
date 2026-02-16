@@ -11,20 +11,20 @@
   import MainView from "./MainView.svelte";
   import SettingsView from "./SettingsView.svelte";
 
-  import { main } from "../wailsjs/go/models";
+  import { models } from "../wailsjs/go/models";
 
   // 画面状態管理
   let currentView: "main" | "settings" = "main";
 
   let vrcLogFileName: string = "";
   let intervalId = 0;
-  let saveData: main.SaveData;
+  let saveData: models.SaveData;
 
-  let contents: main.Setting[] = [];
-  let noticeLogs: main.NoticeLog[] = [];
+  let contents: models.Setting[] = [];
+  let noticeLogs: models.NoticeLog[] = [];
   let idCount = 0;
 
-  window.runtime.EventsOn("commonLogOutput", (noticeLog: main.NoticeLog) => {
+  window.runtime.EventsOn("commonLogOutput", (noticeLog: models.NoticeLog) => {
     noticeLogs = [...noticeLogs, noticeLog];
   });
 
@@ -43,7 +43,7 @@
       text: `${new Date().toLocaleTimeString()} アプリケーション起動`,
       metaData: "",
       title: "[SYSTEM]",
-    } as main.NoticeLog;
+    } as models.NoticeLog;
     noticeLogs = [...noticeLogs, firstLog];
     await LoadSetting().then((result) => (saveData = result));
     contents = saveData.settings;
@@ -70,7 +70,7 @@
         metaData: "",
         title: "[WARNING]",
         canCopy: false,
-      } as main.NoticeLog;
+      } as models.NoticeLog;
       noticeLogs = [...noticeLogs, noticeLog];
       return;
     }
@@ -91,7 +91,7 @@
       Math.floor((1 + Math.random()) * 0x10000)
         .toString(16)
         .substring(1);
-    const newContent = main.Setting.createFrom({
+    const newContent = models.Setting.createFrom({
       id: uuid(),
       title: `無題 ${idCount++}`,
       target: "",
@@ -117,7 +117,7 @@
       isSystem: true,
       isError: false,
       actionSuccess: true,
-    } as main.NoticeLog;
+    } as models.NoticeLog;
     noticeLogs = [...noticeLogs, noticeLog];
     await UpdateSetting(contents).then((result) => console.log(result));
     
@@ -125,14 +125,14 @@
     currentView = "settings";
   }
 
-  async function updateContent(setting: main.Setting) {
+  async function updateContent(setting: models.Setting) {
     contents = contents.map((content) =>
       content.id === setting.id ? setting : content,
     );
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
-  async function deleteContent(setting: main.Setting) {
+  async function deleteContent(setting: models.Setting) {
     contents = contents.filter((content) => content.id !== setting.id);
     const noticeLog = {
       text: `${new Date().toLocaleTimeString()} 削除しました: ${setting.id} ${setting.title}`,
@@ -143,12 +143,12 @@
       isSystem: true,
       isError: false,
       actionSuccess: true,
-    } as main.NoticeLog;
+    } as models.NoticeLog;
     noticeLogs = [...noticeLogs, noticeLog];
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
-  async function handleReorderContents(newContents: main.Setting[]) {
+  async function handleReorderContents(newContents: models.Setting[]) {
     contents = newContents;
     await UpdateSetting(contents).then((result) => console.log(result));
     const noticeLog = {
@@ -160,7 +160,7 @@
       isSystem: true,
       isError: false,
       actionSuccess: true,
-    } as main.NoticeLog;
+    } as models.NoticeLog;
     noticeLogs = [...noticeLogs, noticeLog];
   }
 

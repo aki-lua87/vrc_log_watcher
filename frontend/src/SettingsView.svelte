@@ -2,20 +2,22 @@
     import { dndzone } from "svelte-dnd-action";
     import { flip } from "svelte/animate";
     import RegexHelper from "./components/RegexHelper.svelte";
-    import { main } from "../wailsjs/go/models";
+    import { models } from "../wailsjs/go/models";
 
-    export let settings: main.Setting[] = [];
+    export let settings: models.Setting[] = [];
     export let onBack: () => void;
-    export let onUpdate: (setting: main.Setting) => void;
-    export let onDelete: (setting: main.Setting) => void;
+    export let onUpdate: (setting: models.Setting) => void;
+    export let onDelete: (setting: models.Setting) => void;
     export let onAdd: () => void;
-    export let onReorder: (newSettings: main.Setting[]) => void;
+    export let onReorder: (newSettings: models.Setting[]) => void;
 
-    let selectedSetting: main.Setting | null = null;
+    let selectedSetting: models.Setting | null = null;
     const flipDurationMs = 200;
+    let showDeleteConfirm = false;
+    let settingToDelete: models.Setting | null = null;
 
     // 設定を選択
-    function selectSetting(setting: main.Setting) {
+    function selectSetting(setting: models.Setting) {
         selectedSetting = setting;
     }
 
@@ -172,7 +174,7 @@
                 </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto p-4 pb-6 settings-scroll">
+            <div class="flex-1 overflow-y-auto p-4 pb-64 settings-scroll">
                 <h3
                     class="text-xs text-gray-400 font-semibold uppercase tracking-wider mb-3"
                 >
@@ -243,7 +245,7 @@
             <div
                 class="flex-1 bg-dark-200 border-r border-gray-800 flex flex-col overflow-hidden"
             >
-                <div class="flex-1 overflow-y-auto settings-scroll-hidden p-6">
+                <div class="flex-1 overflow-y-auto settings-scroll-hidden p-6 pb-64">
                     <div class="max-w-2xl">
                         <div class="mb-6">
                             <div class="flex items-center gap-2 mb-4">
@@ -469,7 +471,7 @@
 
             <!-- 右カラム: Action設定 -->
             <div class="flex-1 bg-dark-200 flex flex-col overflow-hidden">
-                <div class="flex-1 overflow-y-auto settings-scroll-hidden p-6">
+                <div class="flex-1 overflow-y-auto settings-scroll-hidden p-6 pb-64">
                     <div class="max-w-2xl">
                         <div class="mb-6">
                             <div class="flex items-center gap-2 mb-4">
@@ -740,13 +742,8 @@
                                 <div class="pt-4 border-t border-gray-700">
                                     <button
                                         on:click={() => {
-                                            if (
-                                                confirm(
-                                                    `「${selectedSetting.title || "無題"}」を削除してもよろしいですか？\n\nこの操作は取り消せません。`,
-                                                )
-                                            ) {
-                                                onDelete(selectedSetting);
-                                            }
+                                            settingToDelete = selectedSetting;
+                                            showDeleteConfirm = true;
                                         }}
                                         class="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200"
                                     >
@@ -831,6 +828,112 @@
             </div>
         {/if}
     </main>
+
+    <!-- 削除確認モーダル -->
+    {#if showDeleteConfirm && settingToDelete}
+        <div
+            class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
+            on:click={() => {
+                showDeleteConfirm = false;
+                settingToDelete = null;
+            }}
+        >
+            <div
+                class="bg-dark-100 rounded-xl shadow-2xl max-w-md w-full mx-4 border border-gray-700"
+                on:click={(e) => e.stopPropagation()}
+            >
+                <!-- ヘッダー -->
+                <div class="p-6 border-b border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <div
+                            class="w-12 h-12 bg-red-600/20 rounded-full flex items-center justify-center"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                class="h-6 w-6 text-red-500"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                />
+                            </svg>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-white">
+                                設定を削除
+                            </h3>
+                            <p class="text-sm text-gray-400 mt-1">
+                                この操作は取り消せません
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 本文 -->
+                <div class="p-6">
+                    <p class="text-gray-300">
+                        以下の設定を削除してもよろしいですか？
+                    </p>
+                    <div
+                        class="mt-4 p-4 bg-dark-200 rounded-lg border border-gray-700"
+                    >
+                        <p class="text-white font-medium">
+                            {settingToDelete.title || "無題"}
+                        </p>
+                        {#if settingToDelete.details}
+                            <p class="text-sm text-gray-400 mt-1">
+                                {settingToDelete.details}
+                            </p>
+                        {/if}
+                    </div>
+                </div>
+
+                <!-- ボタン -->
+                <div class="p-6 border-t border-gray-700 flex gap-3">
+                    <button
+                        on:click={() => {
+                            showDeleteConfirm = false;
+                            settingToDelete = null;
+                        }}
+                        class="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all duration-200 font-medium"
+                    >
+                        キャンセル
+                    </button>
+                    <button
+                        on:click={() => {
+                            if (settingToDelete) {
+                                onDelete(settingToDelete);
+                                showDeleteConfirm = false;
+                                settingToDelete = null;
+                            }
+                        }}
+                        class="flex-1 px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-all duration-200 font-medium flex items-center justify-center gap-2"
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            class="h-5 w-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                            />
+                        </svg>
+                        削除する
+                    </button>
+                </div>
+            </div>
+        </div>
+    {/if}
 </div>
 
 <style>

@@ -2,9 +2,9 @@
     import { fade, fly } from "svelte/transition";
     import { flip } from "svelte/animate";
     import { ClipboardSetText } from "../wailsjs/runtime";
-    import { main } from "../wailsjs/go/models";
+    import { models } from "../wailsjs/go/models";
 
-    export let noticeLogs: main.NoticeLog[] = [];
+    export let noticeLogs: models.NoticeLog[] = [];
     export let vrcLogFileName: string = "";
     export let logFolderPath: string = "";
     export let onOpenSettings: () => void;
@@ -22,7 +22,7 @@
     }
 
     // ログタイプに応じたスタイルとアイコンを取得
-    function getLogStyle(log: main.NoticeLog) {
+    function getLogStyle(log: models.NoticeLog) {
         if (log.isError) {
             return {
                 bgColor: "bg-red-900/20",
