@@ -98,6 +98,19 @@
         onReorder(settings);
     }
 
+    // タイプ値を表示用ラベルに変換
+    function getTypeLabel(type: string) {
+        const labels: Record<string, string> = {
+            WebRequest: "Web リクエスト",
+            SendXSOverlay: "XSOverlay へ送信",
+            SendDiscordWebHook: "Discord WebHook へ送信",
+            OutputTextFile: "テキストへ出力",
+            LogOnly: "ログにのみ出力",
+            Disable: "何もしない",
+        };
+        return labels[type] || type;
+    }
+
     // タイプに応じたアイコン
     function getTypeIcon(type: string) {
         const icons = {
@@ -111,6 +124,9 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>`,
             OutputTextFile: `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>`,
+            LogOnly: `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>`,
             Disable: `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -224,7 +240,7 @@
                                         class={setting.isCore
                                             ? "text-purple-300"
                                             : "text-gray-400"}
-                                        >{setting.type}</span
+                                        >{getTypeLabel(setting.type)}</span
                                     >
                                 </div>
                             </button>
@@ -245,7 +261,9 @@
             <div
                 class="flex-1 bg-dark-200 border-r border-gray-800 flex flex-col overflow-hidden"
             >
-                <div class="flex-1 overflow-y-auto settings-scroll-hidden p-6 pb-64">
+                <div
+                    class="flex-1 overflow-y-auto settings-scroll-hidden p-6 pb-64"
+                >
                     <div class="max-w-2xl">
                         <div class="mb-6">
                             <div class="flex items-center gap-2 mb-4">
@@ -471,7 +489,9 @@
 
             <!-- 右カラム: Action設定 -->
             <div class="flex-1 bg-dark-200 flex flex-col overflow-hidden">
-                <div class="flex-1 overflow-y-auto settings-scroll-hidden p-6 pb-64">
+                <div
+                    class="flex-1 overflow-y-auto settings-scroll-hidden p-6 pb-64"
+                >
                     <div class="max-w-2xl">
                         <div class="mb-6">
                             <div class="flex items-center gap-2 mb-4">
@@ -528,8 +548,9 @@
                                         >Discord WebHook へ送信</option
                                     >
                                     <option value="OutputTextFile"
-                                        >テキストファイルへ出力</option
+                                        >テキストへ出力</option
                                     >
+                                    <option value="LogOnly">ログに出力</option>
                                     <option value="Disable">何もしない</option>
                                 </select>
                             </div>

@@ -1,3 +1,38 @@
+export namespace logwatcher {
+	
+	export class DebugInfo {
+	    lastReadLine: string;
+	    lastOffset: number;
+	    fileSize: number;
+	    linesRead: number;
+	    lastReadAt: string;
+	    lastNewLinesAt: string;
+	    isRunning: boolean;
+	    skipCount: number;
+	    consecutiveNoProgress: number;
+	    refreshCount: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new DebugInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.lastReadLine = source["lastReadLine"];
+	        this.lastOffset = source["lastOffset"];
+	        this.fileSize = source["fileSize"];
+	        this.linesRead = source["linesRead"];
+	        this.lastReadAt = source["lastReadAt"];
+	        this.lastNewLinesAt = source["lastNewLinesAt"];
+	        this.isRunning = source["isRunning"];
+	        this.skipCount = source["skipCount"];
+	        this.consecutiveNoProgress = source["consecutiveNoProgress"];
+	        this.refreshCount = source["refreshCount"];
+	    }
+	}
+
+}
+
 export namespace models {
 	
 	export class NoticeLog {

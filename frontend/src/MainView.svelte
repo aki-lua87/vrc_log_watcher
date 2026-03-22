@@ -2,6 +2,7 @@
     import { fade, fly } from "svelte/transition";
     import { flip } from "svelte/animate";
     import { ClipboardSetText } from "../wailsjs/runtime";
+    import { GetWatcherDebugInfo } from "../wailsjs/go/main/App";
     import { models } from "../wailsjs/go/models";
 
     export let noticeLogs: models.NoticeLog[] = [];
@@ -9,6 +10,56 @@
     export let logFolderPath: string = "";
     export let onOpenSettings: () => void;
     export let onGetLogFolder: () => void;
+
+    // デバッグ情報
+    let showDebug = false;
+    let debugInfo = {
+        lastReadLine: "",
+        lastOffset: 0,
+        fileSize: 0,
+        linesRead: 0,
+        lastReadAt: "",
+        lastNewLinesAt: "",
+        isRunning: false,
+        skipCount: 0,
+        consecutiveNoProgress: 0,
+        refreshCount: 0,
+    };
+
+    // デバッグ情報を定期更新
+    let debugIntervalId: number | null = null;
+    function toggleDebug() {
+        showDebug = !showDebug;
+        if (showDebug && !debugIntervalId) {
+            fetchDebugInfo();
+            debugIntervalId = setInterval(fetchDebugInfo, 2000);
+        } else if (!showDebug && debugIntervalId) {
+            clearInterval(debugIntervalId);
+            debugIntervalId = null;
+        }
+    }
+    async function fetchDebugInfo() {
+        try {
+            debugInfo = await GetWatcherDebugInfo();
+        } catch (e) {
+            console.error("デバッグ情報取得失敗:", e);
+        }
+    }
+
+    // サムネイルキャッシュ（ファイルパス → Promise<string>）
+    const thumbnailPromises = new Map<string, Promise<string>>();
+
+    function getThumbnail(filePath: string): Promise<string> {
+        if (!thumbnailPromises.has(filePath)) {
+            const promise = import("../wailsjs/go/main/App").then((AppModule) =>
+                AppModule.GetImageThumbnail(filePath)
+                    .then((b64) => `data:image/jpeg;base64,${b64}`)
+                    .catch(() => "")
+            );
+            thumbnailPromises.set(filePath, promise);
+        }
+        return thumbnailPromises.get(filePath)!;
+    }
 
     // コピー機能
     function copyToClipboard(text: string) {
@@ -117,9 +168,53 @@
                 </svg>
                 <span class="font-medium">ログフォルダ選択</span>
             </button>
+
+            <button
+                on:click={toggleDebug}
+                class="px-2 py-2 rounded-lg transition-all duration-200 text-sm {showDebug ? 'bg-yellow-600 hover:bg-yellow-700 text-white' : 'bg-dark-200 hover:bg-dark-300 text-gray-500 border border-gray-700'}"
+                title="デバッグ情報"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                </svg>
+            </button>
         </div>
 
     </header>
+
+    <!-- デバッグパネル -->
+    {#if showDebug}
+        <div class="bg-dark-100 border-b border-yellow-700/50 px-4 py-3 font-mono text-xs">
+            <div class="max-w-5xl mx-auto">
+                <div class="flex items-center gap-2 mb-2 flex-wrap">
+                    <span class="text-yellow-400 font-bold">WATCHER DEBUG</span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400">更新: {debugInfo.lastReadAt || "---"}</span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400">offset: <span class="text-cyan-400">{debugInfo.lastOffset}</span></span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400">fileSize: <span class="text-cyan-400">{debugInfo.fileSize}</span></span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400">前回読行数: <span class="text-green-400">{debugInfo.linesRead}</span></span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400">最終成功: <span class="text-green-400">{debugInfo.lastNewLinesAt || "---"}</span></span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400">実行中: <span class={debugInfo.isRunning ? "text-red-400" : "text-green-400"}>{debugInfo.isRunning ? "Yes" : "No"}</span></span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400">スキップ: <span class={debugInfo.skipCount > 0 ? "text-red-400" : "text-gray-400"}>{debugInfo.skipCount}</span></span>
+                    <span class="text-gray-500">|</span>
+                    <span class="text-gray-400">停滞: <span class={debugInfo.consecutiveNoProgress > 10 ? "text-red-400" : debugInfo.consecutiveNoProgress > 0 ? "text-yellow-400" : "text-gray-400"}>{debugInfo.consecutiveNoProgress}</span></span>
+                    {#if debugInfo.refreshCount > 0}
+                        <span class="text-gray-500">|</span>
+                        <span class="text-orange-400">リフレッシュ: {debugInfo.refreshCount}回</span>
+                    {/if}
+                </div>
+                <div class="text-gray-400">
+                    最終行: <span class="text-white break-all">{debugInfo.lastReadLine || "(未読み取り)"}</span>
+                </div>
+            </div>
+        </div>
+    {/if}
 
     <!-- ログフィード -->
     <main class="flex-1 overflow-y-auto p-6 main-scroll">
@@ -160,6 +255,36 @@
                                         </span>
                                     {/if}
                                 </div>
+
+                                <!-- スクリーンショットサムネイル -->
+                                {#if log.settingId === "core-screenshot" && log.metaData}
+                                    {#await getThumbnail(log.metaData) then src}
+                                        {#if src}
+                                            <div class="mt-3">
+                                                <button
+                                                    on:click={async () => {
+                                                        const AppModule = await import("../wailsjs/go/main/App");
+                                                        try {
+                                                            await AppModule.OpenFile(log.metaData);
+                                                        } catch (e) {
+                                                            console.error("画像を開けませんでした:", e);
+                                                        }
+                                                    }}
+                                                    class="block rounded-md overflow-hidden border border-purple-700/50 hover:border-purple-400 transition-all duration-200 hover:scale-[1.02] focus:outline-none"
+                                                    title="クリックで画像を開く"
+                                                >
+                                                    <img
+                                                        {src}
+                                                        alt="スクリーンショット"
+                                                        class="max-w-xs h-auto"
+                                                    />
+                                                </button>
+                                            </div>
+                                        {/if}
+                                    {:catch}
+                                        <!-- 読み込み失敗時は非表示 -->
+                                    {/await}
+                                {/if}
 
                                 <!-- メタデータ（抽出データ） -->
                                 {#if log.metaData && log.canCopy}

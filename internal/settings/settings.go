@@ -4,12 +4,34 @@ import (
 	"encoding/json"
 	"log"
 	"os"
+	"path/filepath"
 
 	"vrc_log_watcher/internal/applog"
 	"vrc_log_watcher/internal/models"
+	"vrc_log_watcher/internal/pathutil"
 )
 
-const settingFile = "setting.json"
+func settingFilePath() string {
+	return filepath.Join(pathutil.ExeDir(), "setting.json")
+}
+
+// DetectVRChatLogDir VRChatのログディレクトリを自動検出する
+// %USERPROFILE%\AppData\LocalLow\VRChat\VRChat が存在すればそのパスを返す
+func DetectVRChatLogDir() string {
+	userProfile := os.Getenv("USERPROFILE")
+	if userProfile == "" {
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return ""
+		}
+		userProfile = homeDir
+	}
+	vrcLogDir := filepath.Join(userProfile, "AppData", "LocalLow", "VRChat", "VRChat")
+	if _, err := os.Stat(vrcLogDir); err == nil {
+		return vrcLogDir
+	}
+	return ""
+}
 
 // InitCoreSettings VRCイベントの基本機能プリセットを返す
 func InitCoreSettings() []models.Setting {
@@ -19,7 +41,7 @@ func InitCoreSettings() []models.Setting {
 			Title:   "ワールド入室 (名前)",
 			Details: "ワールド入室時のワールド名を取得",
 			IsCore:  true,
-			Type:    "Disable",
+			Type:    "LogOnly",
 			RegExp:  `\[Behaviour\] Entering Room: (.+)`,
 			Exclude: "",
 		},
@@ -28,7 +50,7 @@ func InitCoreSettings() []models.Setting {
 			Title:   "ワールド入室 (ID)",
 			Details: "ワールド入室時のワールドIDを取得",
 			IsCore:  true,
-			Type:    "Disable",
+			Type:    "LogOnly",
 			RegExp:  `Joining[g]*\s+(wrld_[a-f0-9-]+)`,
 			Exclude: "",
 		},
@@ -37,7 +59,7 @@ func InitCoreSettings() []models.Setting {
 			Title:   "ユーザー入室",
 			Details: "ユーザー入室時のユーザー名を取得",
 			IsCore:  true,
-			Type:    "Disable",
+			Type:    "LogOnly",
 			RegExp:  `\[Behaviour\] OnPlayerJoinComplete (.+)`,
 			Exclude: "",
 		},
@@ -46,7 +68,7 @@ func InitCoreSettings() []models.Setting {
 			Title:   "ユーザー退室",
 			Details: "ユーザー退室時のユーザー名を取得",
 			IsCore:  true,
-			Type:    "Disable",
+			Type:    "LogOnly",
 			RegExp:  `\[Behaviour\] OnPlayerLeft ([^\s]+)`,
 			Exclude: "",
 		},
@@ -55,7 +77,7 @@ func InitCoreSettings() []models.Setting {
 			Title:   "スクリーンショット",
 			Details: "写真撮影時のファイルパスを取得",
 			IsCore:  true,
-			Type:    "Disable",
+			Type:    "LogOnly",
 			RegExp:  `\[VRC Camera\] Took screenshot to: (.+)`,
 			Exclude: "",
 		},
@@ -67,12 +89,25 @@ func Load(logger applog.Logger) models.SaveData {
 	log.Default().Println("[DEBUG] [LOG] Load Setting")
 	logger.Log("setting.json 読み込み")
 
-	file, err := os.ReadFile(settingFile)
+	file, err := os.ReadFile(settingFilePath())
 	if err != nil {
-		logger.LogError(err, "setting.json 読み込みエラー")
 		coreSettings := InitCoreSettings()
 		saveData := models.SaveData{Settings: coreSettings}
-		Save(saveData, logger)
+
+		if os.IsNotExist(err) {
+			detectedPath := DetectVRChatLogDir()
+			saveData.LogPath = detectedPath
+			Save(saveData, logger)
+
+			if detectedPath != "" {
+				logger.LogInfo("設定ファイルを新規作成しました。VRChat ログディレクトリを自動検出しました: " + detectedPath)
+			} else {
+				logger.LogInfo("設定ファイルを新規作成しました。「ログフォルダ選択」からVRChatのログフォルダを指定してください。")
+			}
+		} else {
+			logger.LogError(err, "setting.json 読み込みエラー")
+			Save(saveData, logger)
+		}
 		return saveData
 	}
 
@@ -104,7 +139,7 @@ func Save(saveData models.SaveData, logger applog.Logger) {
 		return
 	}
 
-	if err := os.WriteFile(settingFile, jsonData, 0644); err != nil {
+	if err := os.WriteFile(settingFilePath(), jsonData, 0644); err != nil {
 		logger.LogError(err, "setting.json 書き込みエラー")
 	}
 }
@@ -139,13 +174,11 @@ func mergeCoreSettings(saveData models.SaveData, logger applog.Logger) models.Sa
 		if setting.Title != coreSetting.Title ||
 			setting.Details != coreSetting.Details ||
 			setting.RegExp != coreSetting.RegExp ||
-			setting.Exclude != coreSetting.Exclude ||
 			setting.SimpleMode != coreSetting.SimpleMode ||
 			simpleBlocksChanged {
 			saveData.Settings[i].Title = coreSetting.Title
 			saveData.Settings[i].Details = coreSetting.Details
 			saveData.Settings[i].RegExp = coreSetting.RegExp
-			saveData.Settings[i].Exclude = coreSetting.Exclude
 			saveData.Settings[i].SimpleMode = coreSetting.SimpleMode
 			saveData.Settings[i].SimpleBlocks = coreSetting.SimpleBlocks
 			needsUpdate = true

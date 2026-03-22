@@ -1,9 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"context"
-	"encoding/json"
+	"encoding/base64"
 	"fmt"
+	"image"
+	"image/jpeg"
+	_ "image/png"
 	"log"
 	"os"
 	"strings"
@@ -16,6 +20,7 @@ import (
 	"vrc_log_watcher/internal/settings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
+	xdraw "golang.org/x/image/draw"
 )
 
 // App struct
@@ -38,6 +43,15 @@ func (a *App) Log(msg string) {
 	log.Default().Println(logMsg)
 	if a.fileLogger != nil {
 		a.fileLogger.WriteLog(logMsg)
+	}
+}
+
+func (a *App) LogInfo(msg string) {
+	infoMsg := "[INFO] " + msg
+	log.Default().Println(infoMsg)
+	a.SendNoticeLog(msg, "", "[INFO]", false)
+	if a.fileLogger != nil {
+		a.fileLogger.WriteLog(infoMsg)
 	}
 }
 
@@ -120,9 +134,9 @@ func (a *App) GetLastLogTime() string {
 }
 
 func (a *App) LoadSetting() models.SaveData {
-	a.SendNoticeLog("", "setting.json 読み込み", "[SYSTEM]", false)
+	a.SendNoticeLog("setting.json 読み込み", "", "[SYSTEM]", false)
 	a.SaveData = settings.Load(a)
-	a.SendNoticeLog("", "setting.json 読み込みに成功しました", "[SYSTEM]", false)
+	a.SendNoticeLog("setting.json 読み込みに成功しました", "", "[SYSTEM]", false)
 	return a.SaveData
 }
 
@@ -144,16 +158,7 @@ func (a *App) OpenFolderSelectWindow() string {
 
 	log.Default().Println("[DEBUG] [LOG] Target Path:" + path)
 	a.SaveData.LogPath = path
-
-	jsonData, err := json.Marshal(a.SaveData)
-	if err != nil {
-		log.Default().Println(err)
-		log.Fatal(err)
-	}
-	if err := os.WriteFile("setting.json", jsonData, 0644); err != nil {
-		log.Default().Println(err)
-		log.Fatal(err)
-	}
+	settings.Save(a.SaveData, a)
 
 	return path
 }
@@ -193,6 +198,12 @@ func (a *App) ReadFile() {
 	}
 }
 
+// --- フロントエンド連携: デバッグ ---
+
+func (a *App) GetWatcherDebugInfo() logwatcher.DebugInfo {
+	return a.watcher.Debug
+}
+
 // --- フロントエンド連携: XSOverlay ---
 
 func (a *App) PingXSOverlay() {
@@ -215,4 +226,41 @@ func (a *App) OpenFileInExplorer(filePath string) error {
 
 func (a *App) OpenFile(filePath string) error {
 	return fileutil.OpenFile(filePath)
+}
+
+// GetImageThumbnail 指定パスの画像をリサイズしてBase64（JPEG）で返す
+func (a *App) GetImageThumbnail(filePath string) (string, error) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+
+	src, _, err := image.Decode(f)
+	if err != nil {
+		return "", err
+	}
+
+	const maxW, maxH = 320, 320
+	srcBounds := src.Bounds()
+	srcW, srcH := srcBounds.Dx(), srcBounds.Dy()
+	thumbW, thumbH := maxW, maxH
+	if srcW > 0 && srcH > 0 {
+		if float64(srcW)/float64(srcH) > float64(maxW)/float64(maxH) {
+			// 横長：幅を maxW に合わせて高さを計算
+			thumbH = srcH * maxW / srcW
+		} else {
+			// 縦長・正方形：高さを maxH に合わせて幅を計算
+			thumbW = srcW * maxH / srcH
+		}
+	}
+	dst := image.NewRGBA(image.Rect(0, 0, thumbW, thumbH))
+	xdraw.BiLinear.Scale(dst, dst.Bounds(), src, src.Bounds(), xdraw.Over, nil)
+
+	var buf bytes.Buffer
+	if err := jpeg.Encode(&buf, dst, &jpeg.Options{Quality: 80}); err != nil {
+		return "", err
+	}
+
+	return base64.StdEncoding.EncodeToString(buf.Bytes()), nil
 }

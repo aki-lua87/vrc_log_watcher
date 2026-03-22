@@ -56,9 +56,12 @@ func (d *Dispatcher) Send(eventString string, setting models.Setting, isScreensh
 		message := OutputTextFile(eventString, setting.ID, setting.Title)
 		return DispatchResult{Message: message, Label: setting.Title + ": テキスト出力"}
 
+	case "LogOnly":
+		message := "[ログ出力] " + setting.Title + ": " + eventString
+		return DispatchResult{Message: message, Label: setting.Title + ": ログ出力"}
+
 	case "Disable":
-		message := "[何もしない] " + setting.Title + ": " + eventString
-		return DispatchResult{Message: message, Label: setting.Title + ": 何もしない"}
+		return DispatchResult{}
 
 	default:
 		return DispatchResult{}

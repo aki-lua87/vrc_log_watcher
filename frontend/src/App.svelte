@@ -97,7 +97,7 @@
       target: "",
       details: "",
       isCore: false,
-      type: "Disable",
+      type: "LogOnly",
       url: "",
       regexp: "",
       exclude: "",

@@ -6,11 +6,14 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"vrc_log_watcher/internal/pathutil"
 )
 
 // Logger ロギング用インターフェース（内部パッケージで使用）
 type Logger interface {
 	Log(msg string)
+	LogInfo(msg string)
 	LogError(err error, context string)
 }
 
@@ -21,7 +24,7 @@ type FileLogger struct {
 
 // NewFileLogger ログファイルを初期化して返す
 func NewFileLogger() *FileLogger {
-	logDir := "logs"
+	logDir := filepath.Join(pathutil.ExeDir(), "logs")
 	if _, err := os.Stat(logDir); os.IsNotExist(err) {
 		os.Mkdir(logDir, 0755)
 	}

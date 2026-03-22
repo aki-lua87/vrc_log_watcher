@@ -5,9 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"vrc_log_watcher/internal/pathutil"
 )
 
-const baseFolder = "OutputText"
+var baseFolder = filepath.Join(pathutil.ExeDir(), "OutputText")
 
 // OutputTextFile イベント文字列をテキストファイルに出力
 func OutputTextFile(eventString string, settingID string, title string) string {
