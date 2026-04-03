@@ -191,7 +191,7 @@ func (a *App) ResetOffset() {
 func (a *App) ReadFile() {
 	results := a.watcher.ReadFile(a.SaveData.LogPath, a.SaveData.Settings)
 	for _, result := range results {
-		dispatchResult := a.dispatcher.Send(result.Text, result.Setting, result.IsScreenshot)
+		dispatchResult := a.dispatcher.Send(result.Text, result.Setting, result.IsScreenshot, result.LogTime, result.LogFile)
 		if dispatchResult.Label != "" {
 			a.SendNoticeLogWithID(dispatchResult.Message, result.Text, dispatchResult.Label, result.Setting.ID, true)
 		}

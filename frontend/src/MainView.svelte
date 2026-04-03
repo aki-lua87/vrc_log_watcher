@@ -10,6 +10,7 @@
     export let logFolderPath: string = "";
     export let onOpenSettings: () => void;
     export let onGetLogFolder: () => void;
+    export let onOpenHelp: () => void;
 
     // デバッグ情報
     let showDebug = false;
@@ -170,6 +171,16 @@
             </button>
 
             <button
+                on:click={onOpenHelp}
+                class="px-2 py-2 rounded-lg transition-all duration-200 text-sm bg-dark-200 hover:bg-dark-300 text-gray-500 hover:text-sky-400 border border-gray-700"
+                title="ヘルプ"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+            </button>
+
+            <button
                 on:click={toggleDebug}
                 class="px-2 py-2 rounded-lg transition-all duration-200 text-sm {showDebug ? 'bg-yellow-600 hover:bg-yellow-700 text-white' : 'bg-dark-200 hover:bg-dark-300 text-gray-500 border border-gray-700'}"
                 title="デバッグ情報"
@@ -276,7 +287,7 @@
                                                     <img
                                                         {src}
                                                         alt="スクリーンショット"
-                                                        class="max-w-xs h-auto"
+                                                        class="max-w-80 max-h-80 w-auto h-auto"
                                                     />
                                                 </button>
                                             </div>

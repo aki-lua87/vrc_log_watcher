@@ -67,6 +67,8 @@ type MatchResult struct {
 	Setting      models.Setting
 	Text         string
 	IsScreenshot bool
+	LogTime      string
+	LogFile      string
 }
 
 // GetNewestFileName フォルダ内の最新のtxtファイルを探索
@@ -248,7 +250,12 @@ func (w *Watcher) ReadFile(logPath string, settings []models.Setting) []MatchRes
 		lastLine = line
 		linesRead++
 		w.extractTimeFromVRCLog(line)
+		logTime := w.LastLogTime
 		matches := w.evaluateLine(line, settings)
+		for i := range matches {
+			matches[i].LogTime = logTime
+			matches[i].LogFile = targetFile
+		}
 		results = append(results, matches...)
 	}
 

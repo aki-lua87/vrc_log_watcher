@@ -10,11 +10,12 @@
 
   import MainView from "./MainView.svelte";
   import SettingsView from "./SettingsView.svelte";
+  import HelpView from "./HelpView.svelte";
 
   import { models } from "../wailsjs/go/models";
 
   // 画面状態管理
-  let currentView: "main" | "settings" = "main";
+  let currentView: "main" | "settings" | "help" = "main";
 
   let vrcLogFileName: string = "";
   let intervalId = 0;
@@ -172,17 +173,47 @@
   function closeSettings() {
     currentView = "main";
   }
+
+  function openHelp() {
+    currentView = "help";
+  }
+
+  function closeHelp() {
+    currentView = "main";
+  }
 </script>
 
 <main class="bg-dark-200 text-white min-h-screen relative">
-  <MainView 
-    {noticeLogs} 
+  <MainView
+    {noticeLogs}
     {vrcLogFileName}
     logFolderPath={saveData?.path || ""}
     onOpenSettings={openSettings}
     onGetLogFolder={getLogFolderPath}
+    onOpenHelp={openHelp}
   />
   
+  {#if currentView === "help"}
+    <div
+      class="fixed inset-0 z-50 flex items-end"
+      on:click={closeHelp}
+      on:keydown={(e) => e.key === 'Escape' && closeHelp()}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="w-full bg-dark-100 rounded-t-2xl shadow-2xl h-[80vh] overflow-hidden"
+        on:click|stopPropagation
+        on:keydown={(e) => e.key === 'Escape' && closeHelp()}
+        role="dialog"
+        tabindex="-1"
+        transition:fly={{ y: 1000, duration: 400 }}
+      >
+        <HelpView onBack={closeHelp} />
+      </div>
+    </div>
+  {/if}
+
   {#if currentView === "settings"}
     <div 
       class="fixed inset-0 z-50 flex items-end" 
@@ -192,7 +223,7 @@
       tabindex="0"
     >
       <div 
-        class="w-full bg-dark-100 rounded-t-2xl shadow-2xl max-h-[80vh] overflow-hidden"
+        class="w-full bg-dark-100 rounded-t-2xl shadow-2xl h-[80vh] overflow-hidden"
         on:click|stopPropagation
         on:keydown={(e) => e.key === 'Escape' && closeSettings()}
         role="dialog"
