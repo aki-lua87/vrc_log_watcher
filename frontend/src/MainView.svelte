@@ -1,7 +1,7 @@
 <script lang="ts">
     import { fade, fly } from "svelte/transition";
     import { flip } from "svelte/animate";
-    import { ClipboardSetText } from "../wailsjs/runtime";
+    import { ClipboardSetText, BrowserOpenURL } from "../wailsjs/runtime";
     import { GetWatcherDebugInfo } from "../wailsjs/go/main/App";
     import { models } from "../wailsjs/go/models";
 
@@ -60,6 +60,16 @@
             thumbnailPromises.set(filePath, promise);
         }
         return thumbnailPromises.get(filePath)!;
+    }
+
+    // URL判定
+    function isURL(text: string): boolean {
+        try {
+            const url = new URL(text);
+            return url.protocol === "http:" || url.protocol === "https:";
+        } catch {
+            return false;
+        }
     }
 
     // コピー機能
@@ -305,7 +315,17 @@
                                             <p class="text-base font-mono text-white truncate">{log.metaData}</p>
                                         </div>
                                         <div class="flex gap-2">
-                                            {#if log.settingId === "core-screenshot"}
+                                            {#if isURL(log.metaData)}
+                                                <button
+                                                    on:click={() => BrowserOpenURL(log.metaData)}
+                                                    class="flex-shrink-0 px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-md transition-all duration-200 flex items-center gap-1.5 text-sm"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                    </svg>
+                                                    ブラウザで開く
+                                                </button>
+                                            {:else if log.settingId === "core-screenshot"}
                                                 <button
                                                     on:click={async () => {
                                                         const AppModule = await import("../wailsjs/go/main/App");
