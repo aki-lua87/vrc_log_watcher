@@ -9,9 +9,6 @@
     "preview": "vite preview",
     "check": "svelte-check --tsconfig ./tsconfig.json"
   },
-  "pnpm": {
-    "onlyBuiltDependencies": ["@parcel/watcher", "esbuild", "svelte-preprocess"]
-  },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^1.0.1",
     "@tsconfig/svelte": "^3.0.0",
