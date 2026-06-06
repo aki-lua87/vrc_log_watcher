@@ -83,6 +83,31 @@
             });
     }
 
+    // フィルター
+    let filterSettingId: string = "";
+    let filterText: string = "";
+
+    $: uniqueSettings = [
+        ...new Map(
+            noticeLogs
+                .filter((l) => l.settingId)
+                .map((l) => [l.settingId, { id: l.settingId, title: l.title }])
+        ).values(),
+    ];
+
+    $: filteredLogs = noticeLogs.filter((log) => {
+        if (filterSettingId && log.settingId !== filterSettingId) return false;
+        if (filterText && !(log.metaData ?? "").toLowerCase().includes(filterText.toLowerCase())) return false;
+        return true;
+    });
+
+    $: isFiltering = filterSettingId !== "" || filterText !== "";
+
+    function clearFilters() {
+        filterSettingId = "";
+        filterText = "";
+    }
+
     // ログタイプに応じたスタイルとアイコンを取得
     function getLogStyle(log: models.NoticeLog) {
         if (log.isError) {
@@ -237,6 +262,58 @@
         </div>
     {/if}
 
+    <!-- フィルターバー -->
+    <div class="bg-dark-100 border-b border-gray-800 px-4 py-1.5">
+        <div class="max-w-5xl mx-auto flex items-center justify-end gap-3 flex-wrap">
+            <span class="text-xs text-gray-500 shrink-0">フィルター:</span>
+
+            <!-- 設定フィルター -->
+            <select
+                bind:value={filterSettingId}
+                class="text-xs bg-dark-200 border border-gray-700 text-gray-300 rounded-md px-2 py-1 focus:outline-none focus:border-primary-500 min-w-32"
+            >
+                <option value="">すべての設定</option>
+                {#each uniqueSettings as s}
+                    <option value={s.id}>{s.title}</option>
+                {/each}
+            </select>
+
+            <!-- テキストフィルター -->
+            <div class="relative min-w-40 max-w-xs">
+                <input
+                    type="text"
+                    bind:value={filterText}
+                    placeholder="抽出データで絞り込み..."
+                    class="w-full text-xs bg-dark-200 border border-gray-700 text-gray-300 rounded-md px-2 py-1 pr-6 focus:outline-none focus:border-primary-500 placeholder-gray-600"
+                />
+                {#if filterText}
+                    <button
+                        on:click={() => (filterText = "")}
+                        class="absolute right-1.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300"
+                        title="クリア"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                {/if}
+            </div>
+
+            <!-- フィルター中の件数表示・クリアボタン -->
+            {#if isFiltering}
+                <span class="text-xs text-primary-400">
+                    {filteredLogs.length} / {noticeLogs.length} 件
+                </span>
+                <button
+                    on:click={clearFilters}
+                    class="text-xs text-gray-500 hover:text-gray-300 underline"
+                >
+                    クリア
+                </button>
+            {/if}
+        </div>
+    </div>
+
     <!-- ログフィード -->
     <main class="flex-1 overflow-y-auto p-6 main-scroll">
         <div class="max-w-5xl mx-auto space-y-4">
@@ -248,8 +325,16 @@
                     <p class="text-lg font-medium">ログはまだありません</p>
                     <p class="text-sm mt-2">VRChatのログ監視が開始されると、ここにイベントが表示されます</p>
                 </div>
+            {:else if filteredLogs.length === 0}
+                <div class="flex flex-col items-center justify-center h-96 text-gray-500" transition:fade>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 mb-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z" />
+                    </svg>
+                    <p class="text-lg font-medium">条件に一致するログがありません</p>
+                    <button on:click={clearFilters} class="text-sm mt-2 text-primary-400 hover:underline">フィルターをクリア</button>
+                </div>
             {:else}
-                {#each noticeLogs.slice().reverse() as log, index (log.timestamp + log.text + index)}
+                {#each filteredLogs.slice().reverse() as log, index (log.timestamp + log.text + index)}
                     {@const style = getLogStyle(log)}
                     <div
                         class="log-card p-4 rounded-lg border {style.bgColor} {style.borderColor} hover:shadow-lg transition-all duration-200"
