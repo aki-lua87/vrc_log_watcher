@@ -1,6 +1,5 @@
 <script lang="ts">
-  import logo from "./assets/images/logo-universal.png";
-  import { ClipboardSetText } from "../wailsjs/runtime";
+  import { fly } from "svelte/transition";
   import { OpenFolderSelectWindow } from "../wailsjs/go/main/App.js";
   import { GetNewestFileName } from "../wailsjs/go/main/App.js";
   import { PingXSOverlay } from "../wailsjs/go/main/App.js";
@@ -9,24 +8,24 @@
   import { LoadNoticeLog } from "../wailsjs/go/main/App.js";
   import { ReadFile } from "../wailsjs/go/main/App.js";
 
-  import Header from "./Header.svelte";
-  import Content from "./Content.svelte";
-  import Tabs from "./Tabs.svelte";
-  import Footer from "./Footer.svelte";
+  import MainView from "./MainView.svelte";
+  import SettingsView from "./SettingsView.svelte";
+  import HelpView from "./HelpView.svelte";
 
-  import { main } from "../wailsjs/go/models";
-  import { text } from "svelte/internal";
+  import { models } from "../wailsjs/go/models";
+
+  // 画面状態管理
+  let currentView: "main" | "settings" | "help" = "main";
 
   let vrcLogFileName: string = "";
   let intervalId = 0;
-  let saveData: main.SaveData;
+  let saveData: models.SaveData;
 
-  let contents: main.Setting[] = [];
-  let selectedContent: main.Setting | null = null;
-  let noticeLogs: main.NoticeLog[] = [];
+  let contents: models.Setting[] = [];
+  let noticeLogs: models.NoticeLog[] = [];
   let idCount = 0;
 
-  window.runtime.EventsOn("commonLogOutput", (noticeLog: main.NoticeLog) => {
+  window.runtime.EventsOn("commonLogOutput", (noticeLog: models.NoticeLog) => {
     noticeLogs = [...noticeLogs, noticeLog];
   });
 
@@ -42,10 +41,10 @@
   async function init() {
     await LoadNoticeLog(); // 構造体のロードのためのダミーコール
     const firstLog = {
-      text: `${new Date().toLocaleTimeString()} Application start`,
+      text: `${new Date().toLocaleTimeString()} アプリケーション起動`,
       metaData: "",
-      title: "[SYSTEM TS]",
-    } as main.NoticeLog;
+      title: "[SYSTEM]",
+    } as models.NoticeLog;
     noticeLogs = [...noticeLogs, firstLog];
     await LoadSetting().then((result) => (saveData = result));
     contents = saveData.settings;
@@ -72,7 +71,7 @@
         metaData: "",
         title: "[WARNING]",
         canCopy: false,
-      } as main.NoticeLog;
+      } as models.NoticeLog;
       noticeLogs = [...noticeLogs, noticeLog];
       return;
     }
@@ -93,139 +92,153 @@
       Math.floor((1 + Math.random()) * 0x10000)
         .toString(16)
         .substring(1);
-    const newContent: main.Setting = {
+    const newContent = models.Setting.createFrom({
       id: uuid(),
-      title: `untitled ${idCount++}`,
+      title: `無題 ${idCount++}`,
       target: "",
       details: "",
-      type: "Web Request",
+      isCore: false,
+      type: "LogOnly",
       url: "",
       regexp: "",
       exclude: "",
-    };
+      messageKey: "",
+      extraFields: {},
+      simpleMode: false,
+      simplePattern: "",
+      simpleBlocks: [],
+    });
     contents = [...contents, newContent];
-    // 選択を更新
-    selectedContent = contents.find((content) => content.id === newContent.id);
     const noticeLog = {
       text: `${new Date().toLocaleTimeString()} 設定を追加しました: ${newContent.id} ${newContent.title}`,
       metaData: "",
-      title: "[SYSTEM TS]",
-    } as main.NoticeLog;
+      title: "[SYSTEM]",
+      canCopy: false,
+      timestamp: "",
+      isSystem: true,
+      isError: false,
+      actionSuccess: true,
+    } as models.NoticeLog;
     noticeLogs = [...noticeLogs, noticeLog];
     await UpdateSetting(contents).then((result) => console.log(result));
+    
+    // 設定画面を開く
+    currentView = "settings";
   }
 
-  function selectContent(customEvent: CustomEvent<main.Setting>) {
-    let selectContent = customEvent.detail;
-    selectedContent = contents.find(
-      (content) => content.id === selectContent.id,
-    );
-  }
-
-  // CustomEvent<any>を使っているので、any型で受け取る
-  async function updateContent(customEvent: CustomEvent<main.Setting>) {
-    // CustomEvent<any> を Content型に変換
-    let updateContent = customEvent.detail;
+  async function updateContent(setting: models.Setting) {
     contents = contents.map((content) =>
-      content.id === updateContent.id ? updateContent : content,
+      content.id === setting.id ? setting : content,
     );
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
-  async function deleteContent(customEvent: CustomEvent<main.Setting>) {
-    let deleteContent = customEvent.detail;
-    contents = contents.filter((content) => content.id !== deleteContent.id);
-    if (contents.length > 0) {
-      selectedContent = contents[0];
-    } else {
-      selectedContent = null;
-    }
+  async function deleteContent(setting: models.Setting) {
+    contents = contents.filter((content) => content.id !== setting.id);
     const noticeLog = {
-      text: `${new Date().toLocaleTimeString()} 削除しました: ${deleteContent.id} ${deleteContent.title}`,
+      text: `${new Date().toLocaleTimeString()} 削除しました: ${setting.id} ${setting.title}`,
       metaData: "",
-      title: "[SYSTEM TS]",
-    } as main.NoticeLog;
+      title: "[SYSTEM]",
+      canCopy: false,
+      timestamp: "",
+      isSystem: true,
+      isError: false,
+      actionSuccess: true,
+    } as models.NoticeLog;
     noticeLogs = [...noticeLogs, noticeLog];
     await UpdateSetting(contents).then((result) => console.log(result));
   }
 
-  // 設定の順序変更を処理する関数
-  async function handleReorderContents(customEvent: CustomEvent<main.Setting[]>) {
-    // 新しい順序の設定配列を取得
-    const newContents = customEvent.detail;
-    // 設定配列を更新
+  async function handleReorderContents(newContents: models.Setting[]) {
     contents = newContents;
-    // 選択中の設定が存在する場合、選択状態を維持
-    if (selectedContent) {
-      selectedContent = contents.find(
-        (content) => content.id === selectedContent.id
-      );
-    }
-    // バックエンドに保存
     await UpdateSetting(contents).then((result) => console.log(result));
-    // ログに記録
     const noticeLog = {
       text: `${new Date().toLocaleTimeString()} 設定の順序を変更しました`,
       metaData: "",
-      title: "[SYSTEM TS]",
-    } as main.NoticeLog;
+      title: "[SYSTEM]",
+      canCopy: false,
+      timestamp: "",
+      isSystem: true,
+      isError: false,
+      actionSuccess: true,
+    } as models.NoticeLog;
     noticeLogs = [...noticeLogs, noticeLog];
   }
 
-  function sendLogEvent(customEvent: CustomEvent<main.NoticeLog>) {
-    let event = customEvent.detail;
-    noticeLogs = [...noticeLogs, event];
+  // 画面切り替え
+  function openSettings() {
+    currentView = "settings";
   }
 
-  function clipboardData(customEvent: CustomEvent<string>) {
-    let str = customEvent.detail;
-    ClipboardSetText(str)
-      .then(() => {
-        console.log("success");
-      })
-      .catch((err) => {
-        console.log("fail", err);
-      });
+  function closeSettings() {
+    currentView = "main";
+  }
+
+  function openHelp() {
+    currentView = "help";
+  }
+
+  function closeHelp() {
+    currentView = "main";
   }
 </script>
 
-<main class="bg-dark-200 text-white min-h-screen">
-  <div class="flex flex-col h-screen">
-    <Header filename={vrcLogFileName} on:getLogFolderPath={getLogFolderPath} />
-    <div class="flex flex-1 overflow-hidden p-2 gap-3">
-      <Tabs
-        {contents}
-        on:selectContent={selectContent}
-        on:addContent={addContent}
-        on:reorderContents={handleReorderContents}
-      />
-
-      {#if selectedContent}
-        <Content
-          bind:content={selectedContent}
-          on:updateContent={updateContent}
-          on:deleteContent={deleteContent}
-          on:logEvent={sendLogEvent}
-        />
-      {:else}
-        <div
-          class="flex-grow flex items-center justify-center bg-dark-100 rounded-lg shadow-card"
-        >
-          <div class="text-center p-6">
-            <h2 class="text-xl font-bold mb-2">設定が選択されていません</h2>
-            <p class="text-gray-400 mb-4">
-              左側のタブから設定を選択するか、新しい設定を追加してください
-            </p>
-            <button
-              class="bg-primary-600 hover:bg-primary-700 text-white py-2 px-4 rounded-lg transition-all duration-200 shadow-md"
-              on:click={addContent}
-            >
-              新しい設定を追加
-            </button>
-          </div>
-        </div>
-      {/if}
+<main class="bg-dark-200 text-white min-h-screen relative">
+  <MainView
+    {noticeLogs}
+    {vrcLogFileName}
+    logFolderPath={saveData?.path || ""}
+    onOpenSettings={openSettings}
+    onGetLogFolder={getLogFolderPath}
+    onOpenHelp={openHelp}
+  />
+  
+  {#if currentView === "help"}
+    <div
+      class="fixed inset-0 z-50 flex items-end"
+      on:click={closeHelp}
+      on:keydown={(e) => e.key === 'Escape' && closeHelp()}
+      role="button"
+      tabindex="0"
+    >
+      <div
+        class="w-full bg-dark-100 rounded-t-2xl shadow-2xl h-[80vh] overflow-hidden"
+        on:click|stopPropagation
+        on:keydown={(e) => e.key === 'Escape' && closeHelp()}
+        role="dialog"
+        tabindex="-1"
+        transition:fly={{ y: 1000, duration: 400 }}
+      >
+        <HelpView onBack={closeHelp} />
+      </div>
     </div>
-    <Footer {noticeLogs} on:clipboardData={clipboardData} />
-  </div>
+  {/if}
+
+  {#if currentView === "settings"}
+    <div 
+      class="fixed inset-0 z-50 flex items-end" 
+      on:click={closeSettings}
+      on:keydown={(e) => e.key === 'Escape' && closeSettings()}
+      role="button"
+      tabindex="0"
+    >
+      <div 
+        class="w-full bg-dark-100 rounded-t-2xl shadow-2xl h-[80vh] overflow-hidden"
+        on:click|stopPropagation
+        on:keydown={(e) => e.key === 'Escape' && closeSettings()}
+        role="dialog"
+        tabindex="-1"
+        transition:fly={{ y: 1000, duration: 400 }}
+      >
+        <SettingsView
+          settings={contents}
+          onBack={closeSettings}
+          onUpdate={updateContent}
+          onDelete={deleteContent}
+          onAdd={addContent}
+          onReorder={handleReorderContents}
+        />
+      </div>
+    </div>
+  {/if}
 </main>
