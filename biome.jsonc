@@ -1,0 +1,91 @@
+{
+    "$schema": "./frontend/node_modules/@biomejs/biome/configuration_schema.json",
+    "vcs": {
+        "enabled": true,
+        "clientKind": "git",
+        "useIgnoreFile": true
+    },
+    "files": {
+        // 対象はフロントエンドのみ（Go は gofmt / go vet で確認する）
+        // wailsjs は `wails generate module` の生成物なので対象外
+        "includes": [
+            "frontend/**",
+            "!!frontend/dist",
+            "!!frontend/wailsjs",
+            "!frontend/package-lock.json",
+            "!frontend/pnpm-lock.yaml"
+        ]
+    },
+    "formatter": {
+        "enabled": true,
+        "indentStyle": "space",
+        "indentWidth": 4,
+        "lineWidth": 120,
+        "lineEnding": "lf"
+    },
+    "javascript": {
+        "formatter": {
+            "quoteStyle": "double"
+        }
+    },
+    "html": {
+        // .svelte のテンプレート部分も整形・lint する（Biome では実験的機能）
+        "experimentalFullSupportEnabled": true,
+        "formatter": {
+            "enabled": true,
+            // <script> と <style> の中も1段インデントする（既存の書き方に合わせる）
+            "indentScriptAndStyle": true
+        }
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "preset": "recommended",
+            "a11y": {
+                // フォームを使っていないため type="button" の付け忘れによる誤送信は起きない
+                "useButtonType": "off"
+            },
+            "suspicious": {
+                "noExplicitAny": "warn",
+                // Tailwind v3 の @tailwind ディレクティブ
+                "noUnknownAtRules": {
+                    "level": "error",
+                    "options": { "ignore": ["tailwind"] }
+                }
+            }
+        }
+    },
+    "overrides": [
+        {
+            // Svelte の書き方と衝突するルール
+            "includes": ["**/*.svelte"],
+            "linter": {
+                "rules": {
+                    "correctness": {
+                        // $store の自動購読やテンプレートだけで使う import を未使用と誤判定する
+                        "noUnusedImports": "off",
+                        "noUnusedVariables": "off",
+                        // settings = settings のような再代入でリアクティビティを起こす
+                        "noSelfAssign": "off"
+                    },
+                    "suspicious": {
+                        // on:click={() => (open = !open)} のようなイベントハンドラで使う
+                        "noAssignInExpressions": "off"
+                    },
+                    "style": {
+                        // スタイルはコンポーネントごとにスコープされ、別要素のセレクタの並び順まで揃える意味が薄い
+                        "noDescendingSpecificity": "off"
+                    }
+                }
+            }
+        }
+    ],
+    "assist": {
+        "enabled": true,
+        "actions": {
+            "source": {
+                "organizeImports": "on"
+            }
+        }
+    }
+}

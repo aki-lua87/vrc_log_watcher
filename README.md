@@ -50,6 +50,26 @@ wails generate module
 
 mise のタスクからも同様の操作が可能です (`mise run dev` / `mise run build` など)。
 
+## 整形と lint
+
+| 対象 | ツール | 設定 |
+|------|--------|------|
+| フロントエンド (Svelte / TS / CSS / JSON) | [Biome](https://biomejs.dev/) | [biome.jsonc](biome.jsonc) |
+| 型チェック・Svelte の警告 | svelte-check | `frontend/tsconfig.json` |
+| Go | gofmt / go vet | なし（標準） |
+
+スペース4つ・1行120文字・改行コード LF に揃えています ([.editorconfig](.editorconfig))。
+
+```bash
+# まとめて整形する
+mise run fmt
+
+# 整形・lint をまとめて確認する（CI と同じ内容）
+mise run lint
+```
+
+フロントエンドだけなら `frontend` で `pnpm run format` / `pnpm run lint` も使えます。PR と main への push では GitHub Actions ([lint.yml](.github/workflows/lint.yml)) で同じ確認が動きます。VS Code では推奨拡張機能（Biome / Svelte / Go）を入れると、保存時に自動で整形されます。
+
 ## ライセンス
 
 [LICENSE](LICENSE) 
