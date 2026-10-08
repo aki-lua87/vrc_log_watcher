@@ -46,3 +46,5 @@ export function SendNoticeLog(arg1:string,arg2:string,arg3:string,arg4:boolean):
 export function SendNoticeLogWithID(arg1:string,arg2:string,arg3:string,arg4:string,arg5:boolean):Promise<void>;
 
 export function UpdateSetting(arg1:Array<models.Setting>):Promise<void>;
+
+export function UpdateTheme(arg1:string):Promise<void>;

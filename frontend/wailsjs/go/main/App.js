@@ -89,3 +89,7 @@ export function SendNoticeLogWithID(arg1, arg2, arg3, arg4, arg5) {
 export function UpdateSetting(arg1) {
   return window['go']['main']['App']['UpdateSetting'](arg1);
 }
+
+export function UpdateTheme(arg1) {
+  return window['go']['main']['App']['UpdateTheme'](arg1);
+}

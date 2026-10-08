@@ -10,3 +10,11 @@ interface Window {
     EventsEmit: (eventName: string, data?: any) => void;
   };
 }
+
+// svelte-dnd-action のイベント型
+declare namespace svelte.JSX {
+  interface HTMLAttributes<T> {
+    onconsider?: (event: CustomEvent<any>) => void;
+    onfinalize?: (event: CustomEvent<any>) => void;
+  }
+}

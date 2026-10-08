@@ -145,6 +145,12 @@ func (a *App) UpdateSetting(ss []models.Setting) {
 	settings.Save(a.SaveData, a)
 }
 
+// UpdateTheme カラーテーマを保存する
+func (a *App) UpdateTheme(theme string) {
+	a.SaveData.Theme = theme
+	settings.Save(a.SaveData, a)
+}
+
 // --- フロントエンド連携: フォルダ選択 ---
 
 func (a *App) OpenFolderSelectWindow() string {
@@ -154,6 +160,12 @@ func (a *App) OpenFolderSelectWindow() string {
 	})
 	if err != nil {
 		a.SendNoticeLog("", "フォルダ選択エラー: "+err.Error(), "[ERROR]", false)
+		return a.SaveData.LogPath
+	}
+
+	// キャンセル時は空文字が返るので、今の設定を保つ
+	if path == "" {
+		return a.SaveData.LogPath
 	}
 
 	log.Default().Println("[DEBUG] [LOG] Target Path:" + path)

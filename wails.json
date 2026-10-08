@@ -1,7 +1,7 @@
 {
   "$schema": "https://wails.io/schemas/config.v2.json",
-  "name": "VRC-Log-Watcher",
-  "outputfilename": "vlw",
+  "name": "VRC-LogBridge",
+  "outputfilename": "VRCLogBridge",
   "frontend:install": "pnpm install",
   "frontend:build": "pnpm run build",
   "frontend:dev:watcher": "pnpm run dev",
@@ -9,5 +9,11 @@
   "author": {
     "name": "aki_lua87",
     "email": "aki_lua87@outlook.jp"
+  },
+  "info": {
+    "companyName": "aki_lua87",
+    "productName": "VRC LogBridge",
+    "copyright": "Copyright © aki_lua87",
+    "comments": "VRChatのログを読み取り、各種サービスへ通知するツール"
   }
 }

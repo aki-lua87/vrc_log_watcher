@@ -1,3 +1,319 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* カラーテーマ: <html data-theme="light|dark|red"> でトークンを切り替える */
+:root,
+:root[data-theme="light"] {
+  --bg: #f6f8f7;
+  --surface: #ffffff;
+  --elev: #eef2f1;
+  --hover: #e8eeec;
+  --line: rgba(10, 40, 35, 0.08);
+  --line-strong: rgba(10, 40, 35, 0.16);
+  --fg: #15201e;
+  --muted: #566562;
+  --faint: #8a9794;
+  --accent: #0d9488;
+  --accent-ink: #0f766e;
+  --on-accent: #ffffff;
+  --accent-soft: rgba(13, 148, 136, 0.1);
+  --ok: #16a34a;
+  --warn: #d97706;
+  --err: #e11d48;
+  --err-soft: rgba(225, 29, 72, 0.06);
+  --radius: 12px;
+  --radius-s: 8px;
+  --shadow: 0 16px 48px rgba(20, 50, 45, 0.16);
+  --font-ui: "BIZ UDPGothic", "Yu Gothic UI", "Meiryo UI", "Segoe UI", system-ui, sans-serif;
+  --font-display: var(--font-ui);
+  --font-data: "Cascadia Mono", "Consolas", ui-monospace, monospace;
+  --cut: none;
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f1213;
+  --surface: #161a1b;
+  --elev: #1e2324;
+  --hover: #232929;
+  --line: rgba(220, 255, 250, 0.07);
+  --line-strong: rgba(220, 255, 250, 0.14);
+  --fg: #e6ebea;
+  --muted: #94a19f;
+  --faint: #62706d;
+  --accent: #2dd4bf;
+  --accent-ink: #5eead4;
+  --on-accent: #032420;
+  --accent-soft: rgba(45, 212, 191, 0.12);
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --err: #fb7185;
+  --err-soft: rgba(251, 113, 133, 0.09);
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+:root[data-theme="red"] {
+  --bg: #09090a;
+  --surface: #111113;
+  --elev: #19191c;
+  --hover: #202024;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 70, 85, 0.3);
+  --fg: #f2f2f3;
+  --muted: #a1a1aa;
+  --faint: #63636c;
+  --accent: #e8112d;
+  --accent-ink: #ff4655;
+  --on-accent: #ffffff;
+  --accent-soft: rgba(232, 17, 45, 0.14);
+  --ok: #4ade80;
+  --warn: #fbbf24;
+  --err: #ff4655;
+  --err-soft: rgba(255, 70, 85, 0.08);
+  --radius: 2px;
+  --radius-s: 2px;
+  --shadow: 0 0 0 1px rgba(232, 17, 45, 0.18), 0 30px 80px rgba(0, 0, 0, 0.75);
+  --font-display: "Bahnschrift", var(--font-ui);
+  --cut: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+  color-scheme: dark;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--faint);
+}
+
+/* ---- 共通コンポーネント ---- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border-radius: var(--radius-s);
+  border: 1px solid var(--line-strong);
+  background: var(--elev);
+  color: var(--fg);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  clip-path: var(--cut);
+}
+.btn:hover {
+  background: var(--hover);
+}
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.btn.pri {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+.btn.pri:hover {
+  filter: brightness(1.08);
+}
+.btn.danger {
+  background: transparent;
+  color: var(--err);
+  border-color: color-mix(in srgb, var(--err) 35%, transparent);
+}
+.btn.danger.fill {
+  background: var(--err);
+  color: #fff;
+  border-color: transparent;
+}
+.btn.ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--muted);
+}
+.btn.ghost:hover {
+  color: var(--fg);
+  background: var(--hover);
+}
+.btn.sm {
+  padding: 5px 10px;
+  font-size: 12px;
+}
+.btn.block {
+  width: 100%;
+}
+:root[data-theme="red"] .btn.pri {
+  box-shadow: 0 0 20px rgba(232, 17, 45, 0.35);
+}
+
+.ib {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  border-radius: var(--radius-s);
+  cursor: pointer;
+  flex: none;
+}
+.ib:hover {
+  background: var(--elev);
+  color: var(--fg);
+}
+
+.inp {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-s);
+  padding: 9px 12px;
+  color: var(--fg);
+  font-size: 13px;
+}
+.inp.mono {
+  font-family: var(--font-data);
+  font-size: 12.5px;
+}
+.inp:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.inp:disabled,
+.inp[readonly] {
+  color: var(--muted);
+}
+select.inp {
+  cursor: pointer;
+}
+
+.lb {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.hint {
+  font-size: 11.5px;
+  color: var(--faint);
+  margin: 0;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+.card h3 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-family: var(--font-display);
+}
+.card h3 > .ic {
+  color: var(--accent);
+}
+:root[data-theme="red"] .card h3 {
+  letter-spacing: 0.05em;
+}
+.lead {
+  margin: 0 0 14px;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.note {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12.5px;
+  color: var(--muted);
+  background: var(--elev);
+  border-radius: var(--radius-s);
+  padding: 9px 12px;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--elev);
+  color: var(--muted);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+:root[data-theme="red"] .badge {
+  border-radius: 2px;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  flex: none;
+}
+.dot.warn {
+  background: var(--warn);
+}
+.dot.err {
+  background: var(--err);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.mono {
+  font-family: var(--font-data);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

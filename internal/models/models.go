@@ -17,6 +17,7 @@ type NoticeLog struct {
 type SaveData struct {
 	LogPath  string    `json:"path"`
 	Settings []Setting `json:"settings"`
+	Theme    string    `json:"theme"`
 }
 
 // Setting 個別の監視・通知ルール設定

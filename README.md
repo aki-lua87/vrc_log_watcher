@@ -1,6 +1,6 @@
-# VLW - VRC Log Watcher
+# VRC LogBridge
 
-VRChat のログファイルをリアルタイムに監視し、特定の行を検知したときに通知やアクションを実行する Windows デスクトップアプリです。
+VRChat のログファイルをリアルタイムに読み取り、特定の行を検知したときに XSOverlay・Discord・Web などへ通知する Windows デスクトップアプリです。（旧名: VRC Log Watcher）
 
 [Wails v2](https://wails.io/) (Go + Svelte/TypeScript) で構築されています。
 
@@ -13,7 +13,7 @@ VRChat のログを読み込み、新しく追記された行を正規表現で�
 |------|------|
 | `LogOnly` | アプリ内のログ表示のみ |
 | `WebRequest` | 指定した URL へ HTTP POST |
-| `SendXSOverlay` | XSOverlay へ UDP で通知を送信 (ポート 42069) |
+| `SendXSOverlay` | XSOverlay へ WebSocket で通知を送信 (localhost:42070) |
 | `SendDiscordWebHook` | Discord Webhook へメッセージ送信 (画像添付対応) |
 | `OutputTextFile` | マッチ結果をテキストファイルへ出力 |
 | `Disable` | 何もしない |
@@ -24,7 +24,7 @@ URL や送信内容には `{time}` `{title}` `{description}` `{matched_text}` `{
 
 ## 設定ファイル
 
-`setting.json` は実行ファイルと同じディレクトリに保存されます。初回起動時に自動生成され、VRChat のログ出力先を自動検出して書き込まれます。
+`setting.json` は実行ファイルと同じディレクトリに保存されます。初回起動時に自動生成され、VRChat のログ出力先を自動検出して書き込まれます。カラーテーマ（ライト / ダーク / レッド）の選択も `theme` として保存されます。
 
 ## 開発情報
 

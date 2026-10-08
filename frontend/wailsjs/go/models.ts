@@ -138,6 +138,7 @@ export namespace models {
 	export class SaveData {
 	    path: string;
 	    settings: Setting[];
+	    theme: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SaveData(source);
@@ -147,6 +148,7 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
 	        this.settings = this.convertValues(source["settings"], Setting);
+	        this.theme = source["theme"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
