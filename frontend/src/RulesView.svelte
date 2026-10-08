@@ -1,5 +1,6 @@
 <script lang="ts">
     import { flip } from "svelte/animate";
+    import type { DndEvent } from "svelte-dnd-action";
     import { dndzone } from "svelte-dnd-action";
     import { GetOutputFolderPath, OpenInExplorer } from "../wailsjs/go/main/App";
     import type { models } from "../wailsjs/go/models";
@@ -47,14 +48,16 @@
         savedTimer = window.setTimeout(() => (savedFlash = false), 1600);
     }
 
-    function updateField(field: string, value: any) {
+    function updateField<K extends keyof models.Setting>(field: K, value: models.Setting[K]) {
         if (!selected) return;
         selected[field] = value;
         save();
     }
 
     // 正規表現ヘルパーからの変更
-    function handleRegexChange(event: CustomEvent) {
+    function handleRegexChange(
+        event: CustomEvent<{ regexp: string; simpleMode: boolean; simpleBlocks: models.SimpleBlock[] }>,
+    ) {
         if (!selected) return;
         const { regexp, simpleMode, simpleBlocks } = event.detail;
         selected.regexp = regexp;
@@ -146,10 +149,10 @@
     }
 
     // ---- ドラッグ&ドロップ ----
-    function handleDndConsider(e: CustomEvent) {
+    function handleDndConsider(e: CustomEvent<DndEvent<models.Setting>>) {
         settings = e.detail.items;
     }
-    function handleDndFinalize(e: CustomEvent) {
+    function handleDndFinalize(e: CustomEvent<DndEvent<models.Setting>>) {
         settings = e.detail.items;
         onReorder(settings);
     }

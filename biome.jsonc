@@ -46,7 +46,7 @@
                 "useButtonType": "off"
             },
             "suspicious": {
-                "noExplicitAny": "warn",
+                "noExplicitAny": "error",
                 // Tailwind v3 の @tailwind ディレクティブ
                 "noUnknownAtRules": {
                     "level": "error",

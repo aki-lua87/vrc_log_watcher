@@ -1,13 +1,20 @@
 <script lang="ts">
     import { createEventDispatcher, onMount } from "svelte";
+    import type { models } from "../../wailsjs/go/models";
     import Icon from "../lib/Icon.svelte";
+
+    type BlockField = "start" | "end" | "prefix" | "keyword";
 
     export let regexp: string = "";
     export let simpleMode: boolean = false;
-    export let simpleBlocks: any[] = [];
+    export let simpleBlocks: models.SimpleBlock[] = [];
     export let isReadOnly: boolean = false;
 
-    const dispatch = createEventDispatcher();
+    const dispatch = createEventDispatcher<{
+        change: { regexp: string; simpleMode: boolean; simpleBlocks: models.SimpleBlock[] };
+    }>();
+
+    const emptyBlock = (): models.SimpleBlock => ({ type: "between", start: "", end: "", prefix: "", keyword: "" });
 
     // 初期化
     onMount(() => {
@@ -21,17 +28,14 @@
         {
             id: "between",
             label: "2つの文字の間を取り出す",
-            fields: ["start", "end"],
         },
         {
             id: "after",
             label: "ある文字のうしろを取り出す",
-            fields: ["prefix"],
         },
         {
             id: "contains",
             label: "ある文字を含む行を取り出す",
-            fields: ["keyword"],
         },
     ];
 
@@ -55,7 +59,7 @@
 
     // ブロックを追加
     function addBlock() {
-        simpleBlocks = [...simpleBlocks, { type: "between", start: "", end: "" }];
+        simpleBlocks = [...simpleBlocks, emptyBlock()];
         updateRegex();
     }
 
@@ -65,26 +69,15 @@
         updateRegex();
     }
 
-    // ブロックタイプの変更
+    // ブロックタイプの変更（入力済みの文字は残しておき、タイプを戻したときに使えるようにする）
     function updateBlockType(index: number, newType: string) {
-        const block = simpleBlocks[index];
-        const newBlock = { type: newType };
-
-        // タイプに応じてフィールドを初期化
-        const patternType = patternTypes.find((pt) => pt.id === newType);
-        if (patternType) {
-            patternType.fields.forEach((field) => {
-                newBlock[field] = block[field] || "";
-            });
-        }
-
-        simpleBlocks[index] = newBlock;
+        simpleBlocks[index] = { ...emptyBlock(), ...simpleBlocks[index], type: newType };
         simpleBlocks = [...simpleBlocks];
         updateRegex();
     }
 
     // ブロックのフィールド更新
-    function updateBlockField(index: number, field: string, value: string) {
+    function updateBlockField(index: number, field: BlockField, value: string) {
         simpleBlocks[index][field] = value;
         simpleBlocks = [...simpleBlocks];
         updateRegex();
