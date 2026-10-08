@@ -212,6 +212,7 @@
       {#if currentView === "log"}
         <LogView
           {noticeLogs}
+          settings={contents}
           {hasFolder}
           onPickFolder={getLogFolderPath}
           onOpenRule={openRule}

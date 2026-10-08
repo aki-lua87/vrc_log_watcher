@@ -25,7 +25,8 @@
   --radius: 12px;
   --radius-s: 8px;
   --shadow: 0 16px 48px rgba(20, 50, 45, 0.16);
-  --font-ui: "BIZ UDPGothic", "Yu Gothic UI", "Meiryo UI", "Segoe UI", system-ui, sans-serif;
+  /* BIZ UDPGothic は WebView2 でアンダースコアが描画されないため使わない（ユーザー名の _ が消える） */
+  --font-ui: "Segoe UI", "Meiryo UI", "Yu Gothic UI", system-ui, sans-serif;
   --font-display: var(--font-ui);
   --font-data: "Cascadia Mono", "Consolas", ui-monospace, monospace;
   --cut: none;

@@ -103,13 +103,18 @@ func (a *App) SendNoticeLog(text string, metaData string, title string, canCopy 
 }
 
 func (a *App) SendNoticeLogWithID(text string, metaData string, title string, settingID string, canCopy bool) {
+	a.sendNoticeLog(text, metaData, title, settingID, canCopy, a.watcher.LastLogTime)
+}
+
+// sendNoticeLog タイムスタンプを指定して通知ログを送る（まとめて読んだ行もそれぞれの時刻で表示するため）
+func (a *App) sendNoticeLog(text string, metaData string, title string, settingID string, canCopy bool, timestamp string) {
 	logTemplate := models.NoticeLog{
 		Text:          text,
 		MetaData:      metaData,
 		Title:         title,
 		SettingID:     settingID,
 		CanCopy:       canCopy,
-		Timestamp:     a.watcher.LastLogTime,
+		Timestamp:     timestamp,
 		IsSystem:      strings.Contains(title, "SYSTEM"),
 		IsError:       strings.Contains(title, "ERROR") || strings.Contains(title, "WARNING"),
 		ActionSuccess: !(strings.Contains(title, "ERROR") || strings.Contains(title, "WARNING")),
@@ -205,7 +210,7 @@ func (a *App) ReadFile() {
 	for _, result := range results {
 		dispatchResult := a.dispatcher.Send(result.Text, result.Setting, result.IsScreenshot, result.LogTime, result.LogFile)
 		if dispatchResult.Label != "" {
-			a.SendNoticeLogWithID(dispatchResult.Message, result.Text, dispatchResult.Label, result.Setting.ID, true)
+			a.sendNoticeLog(dispatchResult.Message, result.Text, dispatchResult.Label, result.Setting.ID, true, result.LogTime)
 		}
 	}
 }

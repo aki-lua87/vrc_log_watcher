@@ -13,6 +13,7 @@
     import { toast } from "./lib/toast";
 
     export let noticeLogs: models.NoticeLog[] = [];
+    export let settings: models.Setting[] = [];
     export let hasFolder = true;
     export let onPickFolder: () => void;
     export let onOpenRule: (settingId: string) => void;
@@ -89,7 +90,7 @@
         return { key, kind, time: fmtTime(log.timestamp), log, ruleTitle, channel, delivered, ok };
     }
 
-    // ワールド入室ごとに区切る。ワールドIDは入室ログの直前に出るので次の見出しに付ける
+    // ワールド入室ごとに区切る。ワールドIDは入室ログ（Entering Room）の直前に出るので次の見出しに付ける
     function buildSessions(logs: models.NoticeLog[]): Session[] {
         const sessions: Session[] = [{ head: null, rows: [] }];
         let pendingWid = "";
@@ -97,8 +98,7 @@
             const e = classify(log, i);
             const cur = sessions[sessions.length - 1];
             if (e.kind === "worldid") {
-                if (cur.head && !cur.head.wid) cur.head.wid = log.metaData;
-                else pendingWid = log.metaData;
+                pendingWid = log.metaData;
             } else if (e.kind === "world") {
                 sessions.push({ head: { ...e, wid: pendingWid }, rows: [] });
                 pendingWid = "";
@@ -109,12 +109,11 @@
         return sessions;
     }
 
-    type Filter = "all" | "join" | "leave" | "world" | "shot" | "other";
-    let filter: Filter = "all";
+    // 絞り込みは通知ルール単位。"" はすべて、SYSTEM はルールに紐づかないログ
+    const ALL = "";
+    const SYSTEM = "__system";
+    let filter = ALL;
     let query = "";
-
-    const group = (e: Entry): Filter =>
-        e.kind === "join" || e.kind === "leave" || e.kind === "shot" ? e.kind : "other";
 
     function matches(e: Entry) {
         if (!query) return true;
@@ -122,40 +121,43 @@
         return [e.log.metaData, e.log.text, e.log.title].join(" ").toLowerCase().includes(q);
     }
 
+    const filterKey = (log: models.NoticeLog) => log.settingId || SYSTEM;
+
     $: sessions = buildSessions(noticeLogs);
-    $: counts = (() => {
-        const c: Record<Filter, number> = { all: 0, join: 0, leave: 0, world: 0, shot: 0, other: 0 };
-        sessions.forEach((s) => {
-            if (s.head) c.world++;
-            s.rows.forEach((r) => {
-                c.all++;
-                c[group(r)]++;
-            });
-        });
+    $: counts = noticeLogs.reduce((c, log) => {
+        const k = filterKey(log);
+        c[k] = (c[k] ?? 0) + 1;
         return c;
+    }, {} as Record<string, number>);
+    // 通知ルール画面の並び順で、ログが1件以上あるルールだけを出す。削除済みのルールはログのタイトルから名前を取る
+    $: filters = (() => {
+        const list: { id: string; label: string }[] = [];
+        settings.forEach((s) => counts[s.id] && list.push({ id: s.id, label: s.title || "名前のないルール" }));
+        noticeLogs.forEach((log) => {
+            const k = filterKey(log);
+            if (k !== SYSTEM && !list.some((f) => f.id === k)) list.push({ id: k, label: splitTitle(log.title)[0] });
+        });
+        if (counts[SYSTEM]) list.push({ id: SYSTEM, label: "システム" });
+        return list;
     })();
+    // ワールド入室のルールは見出し側に表示されるので、見出しで絞り込む
+    const headMatchesFilter = (head: Session["head"]) =>
+        filter === ALL ||
+        filter === "core-world-join-name" ||
+        (filter === "core-world-join-id" && !!head?.wid);
     $: visible = sessions
         .map((s) => {
-            let rows = filter === "world" ? [] : filter === "all" ? s.rows : s.rows.filter((r) => group(r) === filter);
+            let rows = filter === ALL ? s.rows : s.rows.filter((r) => filterKey(r.log) === filter);
             rows = rows.filter(matches);
-            const headHit = !!s.head && (filter === "all" || filter === "world") && matches(s.head);
-            const show = filter === "all" && !query ? true : rows.length > 0 || headHit;
+            const headHit = !!s.head && headMatchesFilter(s.head) && matches(s.head);
+            const show = filter === ALL && !query ? true : rows.length > 0 || headHit;
             return { head: s.head, allRows: s.rows, rows: rows.slice().reverse(), show };
         })
         .filter((s) => s.show && (s.head || s.rows.length))
         .reverse();
 
-    const FILTERS: [Filter, string][] = [
-        ["all", "すべて"],
-        ["join", "入室"],
-        ["leave", "退室"],
-        ["world", "ワールド"],
-        ["shot", "写真"],
-        ["other", "その他"],
-    ];
-
     function clearFilters() {
-        filter = "all";
+        filter = ALL;
         query = "";
     }
 
@@ -229,9 +231,12 @@
 {:else}
     <div class="fbar">
         <div class="chips">
-            {#each FILTERS as [key, label]}
-                <button class="chip" aria-pressed={filter === key} on:click={() => (filter = key)}>
-                    {label}<span class="n">{counts[key]}</span>
+            <button class="chip" aria-pressed={filter === ALL} on:click={() => (filter = ALL)}>
+                すべて<span class="n">{noticeLogs.length}</span>
+            </button>
+            {#each filters as f (f.id)}
+                <button class="chip" aria-pressed={filter === f.id} on:click={() => (filter = f.id)}>
+                    {f.label}<span class="n">{counts[f.id]}</span>
                 </button>
             {/each}
         </div>
