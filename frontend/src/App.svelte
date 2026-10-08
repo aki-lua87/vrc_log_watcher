@@ -116,7 +116,7 @@
             extraFields: {},
             simpleMode: true,
             simplePattern: "",
-            simpleBlocks: [{ type: "between", start: "", end: "" }],
+            simpleBlocks: [{ type: "between", start: "", end: "", prefix: "", keyword: "" }],
         });
         contents = [...contents, newContent];
         systemLog(`ルールを追加しました: ${newContent.title}`);

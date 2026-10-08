@@ -40,9 +40,11 @@ type Setting struct {
 
 // SimpleBlock 簡易入力のブロック定義
 type SimpleBlock struct {
-	Type  string `json:"type"`
-	Start string `json:"start"`
-	End   string `json:"end"`
+	Type    string `json:"type"`
+	Start   string `json:"start"`   // between: 前の文字
+	End     string `json:"end"`     // between: うしろの文字
+	Prefix  string `json:"prefix"`  // after: この文字のうしろを取り出す
+	Keyword string `json:"keyword"` // contains: この文字を含む行を取り出す
 }
 
 // XSOApiObject XSOverlay API通信用オブジェクト

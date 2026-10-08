@@ -67,6 +67,8 @@ export namespace models {
 	    type: string;
 	    start: string;
 	    end: string;
+	    prefix: string;
+	    keyword: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SimpleBlock(source);
@@ -77,6 +79,8 @@ export namespace models {
 	        this.type = source["type"];
 	        this.start = source["start"];
 	        this.end = source["end"];
+	        this.prefix = source["prefix"];
+	        this.keyword = source["keyword"];
 	    }
 	}
 	export class Setting {
