@@ -129,15 +129,14 @@
         c[k] = (c[k] ?? 0) + 1;
         return c;
     }, {} as Record<string, number>);
-    // 通知ルール画面の並び順で、ログが1件以上あるルールだけを出す。削除済みのルールはログのタイトルから名前を取る
+    // 通知ルール画面の並び順で、0件のルールも含めてすべて出す。削除済みのルールはログのタイトルから名前を取る
     $: filters = (() => {
-        const list: { id: string; label: string }[] = [];
-        settings.forEach((s) => counts[s.id] && list.push({ id: s.id, label: s.title || "名前のないルール" }));
+        const list: { id: string; label: string }[] = settings.map((s) => ({ id: s.id, label: s.title || "名前のないルール" }));
         noticeLogs.forEach((log) => {
             const k = filterKey(log);
             if (k !== SYSTEM && !list.some((f) => f.id === k)) list.push({ id: k, label: splitTitle(log.title)[0] });
         });
-        if (counts[SYSTEM]) list.push({ id: SYSTEM, label: "システム" });
+        list.push({ id: SYSTEM, label: "システム" });
         return list;
     })();
     // ワールド入室のルールは見出し側に表示されるので、見出しで絞り込む
@@ -236,7 +235,7 @@
             </button>
             {#each filters as f (f.id)}
                 <button class="chip" aria-pressed={filter === f.id} on:click={() => (filter = f.id)}>
-                    {f.label}<span class="n">{counts[f.id]}</span>
+                    {f.label}<span class="n">{counts[f.id] ?? 0}</span>
                 </button>
             {/each}
         </div>
