@@ -1,10 +1,11 @@
 <script lang="ts">
-    import Icon from "./lib/Icon.svelte";
     import { DESTINATIONS, TEMPLATE_VARS } from "./lib/destinations";
+    import Icon from "./lib/Icon.svelte";
 
     const destDetails: Record<string, string> = {
         SendXSOverlay: "XSOverlay（VR内のオーバーレイ）へ通知を送ります。localhost:42070 の WebSocket を使います。",
-        SendDiscordWebHook: "Discord の Webhook へメッセージを投稿します。スクリーンショットのときは画像ファイルを添付して送ります。",
+        SendDiscordWebHook:
+            "Discord の Webhook へメッセージを投稿します。スクリーンショットのときは画像ファイルを添付して送ります。",
         LogOnly: "このアプリのログ画面に表示するだけで、外には送りません。動作確認にも便利です。",
         OutputTextFile: "OutputText/{ルールID}/ フォルダに、日時の名前を付けた .txt ファイルを書き出します。",
         WebRequest: "指定したURLへ JSON を POST します。URLと追加の項目に変数を使えます。",
@@ -39,7 +40,10 @@
                     </li>
                     <li>
                         <b>通知先を選ぶ</b>
-                        <span>「通知ルール」で、入室やスクリーンショットをどこに送るか決めます。XSOverlay ならVRの中で通知が見られます。</span>
+                        <span
+                            >「通知ルール」で、入室やスクリーンショットをどこに送るか決めます。XSOverlay
+                            ならVRの中で通知が見られます。</span
+                        >
                     </li>
                     <li>
                         <b>VRChatを遊ぶ</b>
@@ -73,14 +77,26 @@
             <section class="card">
                 <h3><Icon name="scan" />使える変数</h3>
                 <p class="lead">
-                    Webリクエストの URL と「追加で送る項目」の値に <code>{"{変数名}"}</code> の形で書くと、送るときに実際の値に置き換わります。
+                    Webリクエストの URL と「追加で送る項目」の値に
+                    <code>{"{変数名}"}</code>
+                    の形で書くと、送るときに実際の値に置き換わります。
                 </p>
                 <div class="tw">
                     <table>
-                        <thead><tr><th>変数</th><th>内容</th><th>例</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>変数</th>
+                                <th>内容</th>
+                                <th>例</th>
+                            </tr>
+                        </thead>
                         <tbody>
                             {#each TEMPLATE_VARS as v}
-                                <tr><td class="vn">{v.name}</td><td>{v.desc}</td><td class="ex">{v.example}</td></tr>
+                                <tr>
+                                    <td class="vn">{v.name}</td>
+                                    <td>{v.desc}</td>
+                                    <td class="ex">{v.example}</td>
+                                </tr>
                             {/each}
                         </tbody>
                     </table>
@@ -121,7 +137,9 @@ https://example.com/hook?src=<em>{"{log_file}"}</em>
                             <b>Webリクエスト</b>
                             <p>画像を Base64 にして JSON で送ります。次の項目が自動で付きます。</p>
                             <div class="tags">
-                                {#each ["image", "filename", "mimetype", "world_id", "world_name"] as f}<code>{f}</code>{/each}
+                                {#each ["image", "filename", "mimetype", "world_id", "world_name"] as f}
+                                    <code>{f}</code>
+                                {/each}
                             </div>
                         </div>
                     </div>

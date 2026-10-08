@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { dndzone } from "svelte-dnd-action";
     import { flip } from "svelte/animate";
-    import RegexHelper from "./components/RegexHelper.svelte";
-    import Icon from "./lib/Icon.svelte";
-    import { DESTINATIONS, TEMPLATE_VARS, destinationOf } from "./lib/destinations";
-    import { toast } from "./lib/toast";
+    import { dndzone } from "svelte-dnd-action";
     import { GetOutputFolderPath, OpenInExplorer } from "../wailsjs/go/main/App";
     import type { models } from "../wailsjs/go/models";
+    import RegexHelper from "./components/RegexHelper.svelte";
+    import { DESTINATIONS, destinationOf, TEMPLATE_VARS } from "./lib/destinations";
+    import Icon from "./lib/Icon.svelte";
+    import { toast } from "./lib/toast";
 
     export let settings: models.Setting[] = [];
     export let focusId = "";
@@ -66,7 +66,7 @@
     // ---- ログの1行で試す ----
     const samples: Record<string, string> = {};
     let sample = "";
-    $: sample = selected ? samples[selected.id] ?? "" : "";
+    $: sample = selected ? (samples[selected.id] ?? "") : "";
     function setSample(value: string) {
         if (selected) samples[selected.id] = value;
         sample = value;
@@ -204,18 +204,20 @@
                                     placeholder="ルール名"
                                     aria-label="ルール名"
                                     on:input={(e) => updateField("title", e.currentTarget.value)}
-                                />
+                                >
                                 <input
                                     class="dsc"
                                     value={selected.details}
                                     placeholder="説明を追加（任意）"
                                     aria-label="説明"
                                     on:input={(e) => updateField("details", e.currentTarget.value)}
-                                />
+                                >
                             {/if}
                         </div>
                         <div class="meta">
-                            {#if selected.isCore}<span class="badge"><Icon name="lock" size={11} />標準ルール</span>{/if}
+                            {#if selected.isCore}
+                                <span class="badge"><Icon name="lock" size={11} />標準ルール</span>
+                            {/if}
                             <span class="saved" class:on={savedFlash}>
                                 <Icon name="check" size={13} />{savedFlash ? "保存しました" : "自動保存"}
                             </span>
@@ -223,10 +225,18 @@
                     </div>
 
                     {#if selected.isCore}
-                        <div class="note"><Icon name="lock" size={14} />標準ルールは条件を変えられません。通知先はいつでも変更できます。</div>
+                        <div class="note">
+                            <Icon
+                                name="lock"
+                                size={14}
+                            />標準ルールは条件を変えられません。通知先はいつでも変更できます。
+                        </div>
                     {/if}
                     {#if selected.id === "core-screenshot"}
-                        <div class="note"><Icon name="image" size={14} />撮影した画像は Discord や Webリクエストで画像付きで送られます。詳しくはヘルプを見てください。</div>
+                        <div class="note">
+                            <Icon name="image" size={14} />撮影した画像は Discord や
+                            Webリクエストで画像付きで送られます。詳しくはヘルプを見てください。
+                        </div>
                     {/if}
 
                     <section class="card">
@@ -247,12 +257,21 @@
                                 placeholder="VRChatのログから1行貼り付けると、一致するか確認できます"
                                 value={sample}
                                 on:input={(e) => setSample(e.currentTarget.value)}
-                            />
+                            >
                             {#if testResult}
                                 <div class="result {testResult.state}">
-                                    <Icon name={testResult.state === "ok" ? "check" : testResult.state === "bad" ? "alert" : "x"} size={14} />
+                                    <Icon
+                                        name={testResult.state === "ok"
+                                            ? "check"
+                                            : testResult.state === "bad"
+                                              ? "alert"
+                                              : "x"}
+                                        size={14}
+                                    />
                                     {testResult.text}
-                                    {#if testResult.value !== undefined}<code>{testResult.value}</code>{/if}
+                                    {#if testResult.value !== undefined}
+                                        <code>{testResult.value}</code>
+                                    {/if}
                                 </div>
                             {/if}
                         </div>
@@ -263,7 +282,11 @@
                         <p class="lead">条件に合ったときの送り先を選びます。</p>
                         <div class="dests">
                             {#each DESTINATIONS as d}
-                                <button class="dest" aria-pressed={selected.type === d.type} on:click={() => updateField("type", d.type)}>
+                                <button
+                                    class="dest"
+                                    aria-pressed={selected.type === d.type}
+                                    on:click={() => updateField("type", d.type)}
+                                >
                                     <Icon name={d.icon} size={18} />
                                     <b>{d.label}</b>
                                     <small>{d.desc}</small>
@@ -280,8 +303,10 @@
                                     placeholder="https://discord.com/api/webhooks/…"
                                     value={selected.url}
                                     on:input={(e) => updateField("url", e.currentTarget.value)}
-                                />
-                                <p class="hint">Discordのチャンネル設定 › 連携サービス › ウェブフック で作成したURLを貼り付けます。</p>
+                                >
+                                <p class="hint">
+                                    Discordのチャンネル設定 › 連携サービス › ウェブフック で作成したURLを貼り付けます。
+                                </p>
                             </div>
                         {:else if selected.type === "WebRequest"}
                             <div class="field">
@@ -293,7 +318,7 @@
                                     value={selected.url}
                                     on:focus={rememberField}
                                     on:input={(e) => updateField("url", e.currentTarget.value)}
-                                />
+                                >
                             </div>
                             <div class="field">
                                 <label class="lb" for="rule-mk">本文のキー名</label>
@@ -303,14 +328,20 @@
                                     placeholder="message"
                                     value={selected.messageKey}
                                     on:input={(e) => updateField("messageKey", e.currentTarget.value)}
-                                />
+                                >
                                 <p class="hint">JSONのどのキーにメッセージを入れるか。空なら "message" になります。</p>
                             </div>
                             <div class="field">
                                 <span class="lb">追加で送る項目</span>
                                 {#each extraRows as row, i (i)}
                                     <div class="kv">
-                                        <input class="inp mono" placeholder="キー" aria-label="キー" bind:value={row.key} on:input={commitExtra} />
+                                        <input
+                                            class="inp mono"
+                                            placeholder="キー"
+                                            aria-label="キー"
+                                            bind:value={row.key}
+                                            on:input={commitExtra}
+                                        >
                                         <input
                                             class="inp"
                                             placeholder="値"
@@ -318,41 +349,82 @@
                                             bind:value={row.value}
                                             on:focus={rememberField}
                                             on:input={commitExtra}
-                                        />
-                                        <button class="ib" title="この項目を削除" on:click={() => removeExtraField(i)}><Icon name="x" /></button>
+                                        >
+                                        <button class="ib" title="この項目を削除" on:click={() => removeExtraField(i)}>
+                                            <Icon name="x" />
+                                        </button>
                                     </div>
                                 {/each}
-                                <div><button class="btn sm" on:click={addExtraField}><Icon name="plus" />項目を追加</button></div>
+                                <div>
+                                    <button class="btn sm" on:click={addExtraField}>
+                                        <Icon name="plus" />項目を追加
+                                    </button>
+                                </div>
                             </div>
                             <div class="field">
                                 <span class="lb">使える変数</span>
                                 <div class="vars">
                                     {#each TEMPLATE_VARS as v}
-                                        <button class="var" title={v.desc} on:mousedown|preventDefault on:click={() => insertVar(v.name)}>{v.name}</button>
+                                        <button
+                                            class="var"
+                                            title={v.desc}
+                                            on:mousedown|preventDefault
+                                            on:click={() => insertVar(v.name)}
+                                        >
+                                            {v.name}
+                                        </button>
                                     {/each}
                                 </div>
-                                <p class="hint">クリックすると、URLか項目の値の入力欄（最後に選んだほう）に挿入します。</p>
+                                <p class="hint">
+                                    クリックすると、URLか項目の値の入力欄（最後に選んだほう）に挿入します。
+                                </p>
                             </div>
                         {:else if selected.type === "OutputTextFile"}
                             <div class="field">
                                 <span class="lb">書き出し先</span>
                                 <div class="inline">
-                                    <input class="inp mono" value="./OutputText/{selected.id}/" readonly aria-label="書き出し先" />
+                                    <input
+                                        class="inp mono"
+                                        value="./OutputText/{selected.id}/"
+                                        readonly
+                                        aria-label="書き出し先"
+                                    >
                                     <button class="btn" on:click={openOutputFolder}><Icon name="folder" />開く</button>
                                 </div>
-                                <p class="hint">アプリと同じ場所の OutputText フォルダに、ルールごとに1件ずつファイルを作ります。</p>
+                                <p class="hint">
+                                    アプリと同じ場所の OutputText フォルダに、ルールごとに1件ずつファイルを作ります。
+                                </p>
                             </div>
                         {:else if selected.type === "SendXSOverlay"}
-                            <div class="field"><div class="note"><Icon name="monitor" size={14} />XSOverlay が起動していれば、VRの中に通知が表示されます。</div></div>
+                            <div class="field">
+                                <div class="note">
+                                    <Icon name="monitor" size={14} />XSOverlay
+                                    が起動していれば、VRの中に通知が表示されます。
+                                </div>
+                            </div>
                         {:else if selected.type === "LogOnly"}
-                            <div class="field"><div class="note"><Icon name="eye" size={14} />このアプリのログ画面にだけ表示し、外には送りません。</div></div>
+                            <div class="field">
+                                <div class="note">
+                                    <Icon name="eye" size={14} />このアプリのログ画面にだけ表示し、外には送りません。
+                                </div>
+                            </div>
                         {:else if selected.type === "Disable"}
-                            <div class="field"><div class="note"><Icon name="ban" size={14} />このルールは停止中です。ログにも表示されず、通知もしません。</div></div>
+                            <div class="field">
+                                <div class="note">
+                                    <Icon
+                                        name="ban"
+                                        size={14}
+                                    />このルールは停止中です。ログにも表示されず、通知もしません。
+                                </div>
+                            </div>
                         {/if}
                     </section>
 
                     <details class="card adv">
-                        <summary><Icon name="sliders" />詳細設定 <span class="hint">除外条件・ルールID</span><span class="chev"><Icon name="chev" /></span></summary>
+                        <summary>
+                            <Icon name="sliders" />詳細設定 <span class="hint">除外条件・ルールID</span
+                            ><span class="chev"><Icon name="chev" /></span>
+                        </summary>
                         <div class="field">
                             <label class="lb" for="rule-ex">除外する値</label>
                             <input
@@ -361,7 +433,7 @@
                                 placeholder="例: 自分のユーザー名"
                                 value={selected.exclude}
                                 on:input={(e) => updateField("exclude", e.currentTarget.value)}
-                            />
+                            >
                             <p class="hint">取り出した値がこれと同じときは通知しません。</p>
                         </div>
                         <div class="field">
@@ -374,20 +446,28 @@
                         <div class="danger">
                             {#if confirmDelete}
                                 <div class="confirm">
-                                    <span>「{selected.title || "名前のないルール"}」を削除します。元に戻せません。</span>
+                                    <span
+                                        >「{selected.title || "名前のないルール"}」を削除します。元に戻せません。</span
+                                    >
                                     <button class="btn sm" on:click={() => (confirmDelete = false)}>キャンセル</button>
-                                    <button class="btn sm danger fill" on:click={deleteSelected}><Icon name="trash" />削除する</button>
+                                    <button class="btn sm danger fill" on:click={deleteSelected}>
+                                        <Icon name="trash" />削除する
+                                    </button>
                                 </div>
                             {:else}
                                 <p>このルールが不要になったら削除できます。</p>
-                                <button class="btn danger" on:click={() => (confirmDelete = true)}><Icon name="trash" />ルールを削除</button>
+                                <button class="btn danger" on:click={() => (confirmDelete = true)}>
+                                    <Icon name="trash" />ルールを削除
+                                </button>
                             {/if}
                         </div>
                     {/if}
                 </div>
             {/key}
         {:else}
-            <div class="empty"><Icon name="bell" size={28} /><span>左の一覧からルールを選ぶか、新しいルールを作ってください</span></div>
+            <div class="empty">
+                <Icon name="bell" size={28} /><span>左の一覧からルールを選ぶか、新しいルールを作ってください</span>
+            </div>
         {/if}
     </div>
 </div>

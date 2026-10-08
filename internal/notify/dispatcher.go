@@ -30,11 +30,11 @@ type DispatchResult struct {
 // Send 設定に基づいて適切な通知チャネルに送信
 func (d *Dispatcher) Send(eventString string, setting models.Setting, isScreenshot bool, logTime string, logFile string) DispatchResult {
 	vars := map[string]string{
-		"time":        logTime,
-		"title":       setting.Title,
-		"description": setting.Details,
+		"time":         logTime,
+		"title":        setting.Title,
+		"description":  setting.Details,
 		"matched_text": eventString,
-		"log_file":    logFile,
+		"log_file":     logFile,
 	}
 	setting = applyTemplateToSetting(setting, vars)
 

@@ -182,7 +182,7 @@
                             placeholder="前の文字（例: Entering Room: ）"
                             value={block.start ?? ""}
                             on:input={(e) => updateBlockField(index, "start", e.currentTarget.value)}
-                        />
+                        >
                         <span class="cap"><Icon name="scan" size={13} />取り出す</span>
                         <input
                             class="inp mono"
@@ -190,7 +190,7 @@
                             placeholder="うしろの文字"
                             value={block.end ?? ""}
                             on:input={(e) => updateBlockField(index, "end", e.currentTarget.value)}
-                        />
+                        >
                     </div>
                 {:else if block.type === "contains"}
                     <input
@@ -199,7 +199,7 @@
                         placeholder="含まれる文字"
                         value={block.keyword ?? ""}
                         on:input={(e) => updateBlockField(index, "keyword", e.currentTarget.value)}
-                    />
+                    >
                 {:else if block.type === "after"}
                     <div class="pair two">
                         <input
@@ -208,7 +208,7 @@
                             placeholder="この文字のうしろ（例: OnPlayerLeft ）"
                             value={block.prefix ?? ""}
                             on:input={(e) => updateBlockField(index, "prefix", e.currentTarget.value)}
-                        />
+                        >
                         <span class="cap"><Icon name="scan" size={13} />取り出す</span>
                     </div>
                 {/if}
@@ -225,14 +225,16 @@
             value={regexp}
             on:input={handleRegexChange}
             aria-label="正規表現"
-        />
+        >
         <p class="hint">( ) で囲んだ部分が「取り出した値」になります。</p>
     {/if}
 
     {#if !isReadOnly}
         <div class="tools">
             {#if simpleMode}
-                <button type="button" class="btn sm ghost" on:click={addBlock}><Icon name="plus" />パターンを追加</button>
+                <button type="button" class="btn sm ghost" on:click={addBlock}>
+                    <Icon name="plus" />パターンを追加
+                </button>
             {/if}
             <button type="button" class="btn sm ghost" on:click={toggleMode}>
                 {simpleMode ? "正規表現で書く" : "かんたん入力に戻す"}

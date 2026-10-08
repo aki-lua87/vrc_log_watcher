@@ -55,14 +55,18 @@
             {:else}
                 <span class="dot warn" /><b>ログファイルが見つかりません</b>
             {/if}
-            {#if fileName}<span class="file">{fileName}</span>{/if}
+            {#if fileName}
+                <span class="file">{fileName}</span>
+            {/if}
             <Icon name="chev" size={13} />
         </button>
     {/if}
 
     {#if open}
         <div class="pop" role="dialog" aria-label="監視の状態">
-            <h4>監視の状態 <button class="ib" on:click={() => (open = false)} title="閉じる"><Icon name="x" /></button></h4>
+            <h4>
+                監視の状態 <button class="ib" on:click={() => (open = false)} title="閉じる"><Icon name="x" /></button>
+            </h4>
             <dl>
                 <dt>ログファイル</dt>
                 <dd>{fileName || "---"}</dd>
