@@ -33,9 +33,16 @@
             </div>
             <div class="inline">
                 {#if logFolderPath}
-                    <button class="btn" on:click={openFolder}><Icon name="ext" />開く</button>
+                    <button class="btn" on:click={openFolder}
+                        ><Icon name="ext" />開く</button
+                    >
                 {/if}
-                <button class="btn" class:pri={!logFolderPath} on:click={onPickFolder}>{logFolderPath ? "変更" : "フォルダを選択"}</button>
+                <button
+                    class="btn"
+                    class:pri={!logFolderPath}
+                    on:click={onPickFolder}
+                    >{logFolderPath ? "変更" : "フォルダを選択"}</button
+                >
             </div>
         </div>
         <div class="setrow">
@@ -53,16 +60,26 @@
 
     <section class="card">
         <h3><Icon name="palette" />カラーテーマ</h3>
-        <p class="lead">見た目だけが変わります。通知の動きは同じです。</p>
+        <p class="lead">テーマを変更します</p>
         <div class="skins">
             {#each THEMES as t}
-                <button class="skin" aria-pressed={theme === t.id} on:click={() => onChangeTheme(t.id)}>
+                <button
+                    class="skin"
+                    aria-pressed={theme === t.id}
+                    on:click={() => onChangeTheme(t.id)}
+                >
                     <span class="prev" style="background:{t.preview[1]}">
                         <span style="background:{t.preview[0]}" />
                         <span class="pr">
                             <i style="background:{t.preview[2]};width:42%" />
-                            <i style="background:{t.preview[3]};opacity:.55;width:82%" />
-                            <i style="background:{t.preview[3]};opacity:.3;width:64%" />
+                            <i
+                                style="background:{t
+                                    .preview[3]};opacity:.55;width:82%"
+                            />
+                            <i
+                                style="background:{t
+                                    .preview[3]};opacity:.3;width:64%"
+                            />
                         </span>
                     </span>
                     <b>{t.name}</b>
@@ -76,7 +93,9 @@
         <div class="setrow">
             <div class="k">
                 <b>接続先</b>
-                <span class="hint">localhost:42070（WebSocket）に通知を送り、1分ごとに接続を確認します。</span>
+                <span class="hint"
+                    >localhost:42070（WebSocket）に通知を送り、1分ごとに接続を確認します。</span
+                >
             </div>
         </div>
     </section>
@@ -88,10 +107,14 @@
                 <Logo size={36} />
                 <div>
                     <b>VRC LogBridge</b>
-                    <span class="hint">VRChatのログを読み取り、XSOverlay・Discord・Webなどへ届けます</span>
+                    <span class="hint"
+                        >VRChatのログを読み取り、XSOverlay・Discord・Webなどへ届けます</span
+                    >
                 </div>
             </div>
-            <button class="btn" on:click={() => BrowserOpenURL(REPO_URL)}><Icon name="ext" />GitHub</button>
+            <button class="btn" on:click={() => BrowserOpenURL(REPO_URL)}
+                ><Icon name="ext" />GitHub</button
+            >
         </div>
     </section>
 </div>

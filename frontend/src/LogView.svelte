@@ -18,7 +18,16 @@
     export let onPickFolder: () => void;
     export let onOpenRule: (settingId: string) => void;
 
-    type Kind = "world" | "worldid" | "join" | "leave" | "shot" | "file" | "custom" | "err" | "sys";
+    type Kind =
+        | "world"
+        | "worldid"
+        | "join"
+        | "leave"
+        | "shot"
+        | "file"
+        | "custom"
+        | "err"
+        | "sys";
     type Entry = {
         key: number;
         kind: Kind;
@@ -84,10 +93,21 @@
             default:
                 kind = log.text.includes("[Log Output]") ? "file" : "custom";
         }
-        const [ruleTitle, channel] = log.settingId ? splitTitle(log.title) : [log.title, ""];
+        const [ruleTitle, channel] = log.settingId
+            ? splitTitle(log.title)
+            : [log.title, ""];
         const delivered = channel in CHANNELS;
         const ok = !delivered || log.text.includes("成功");
-        return { key, kind, time: fmtTime(log.timestamp), log, ruleTitle, channel, delivered, ok };
+        return {
+            key,
+            kind,
+            time: fmtTime(log.timestamp),
+            log,
+            ruleTitle,
+            channel,
+            delivered,
+            ok,
+        };
     }
 
     // ワールド入室ごとに区切る。ワールドIDは入室ログ（Entering Room）の直前に出るので次の見出しに付ける
@@ -118,23 +138,33 @@
     function matches(e: Entry) {
         if (!query) return true;
         const q = query.toLowerCase();
-        return [e.log.metaData, e.log.text, e.log.title].join(" ").toLowerCase().includes(q);
+        return [e.log.metaData, e.log.text, e.log.title]
+            .join(" ")
+            .toLowerCase()
+            .includes(q);
     }
 
     const filterKey = (log: models.NoticeLog) => log.settingId || SYSTEM;
 
     $: sessions = buildSessions(noticeLogs);
-    $: counts = noticeLogs.reduce((c, log) => {
-        const k = filterKey(log);
-        c[k] = (c[k] ?? 0) + 1;
-        return c;
-    }, {} as Record<string, number>);
+    $: counts = noticeLogs.reduce(
+        (c, log) => {
+            const k = filterKey(log);
+            c[k] = (c[k] ?? 0) + 1;
+            return c;
+        },
+        {} as Record<string, number>,
+    );
     // 通知ルール画面の並び順で、0件のルールも含めてすべて出す。削除済みのルールはログのタイトルから名前を取る
     $: filters = (() => {
-        const list: { id: string; label: string }[] = settings.map((s) => ({ id: s.id, label: s.title || "名前のないルール" }));
+        const list: { id: string; label: string }[] = settings.map((s) => ({
+            id: s.id,
+            label: s.title || "名前のないルール",
+        }));
         noticeLogs.forEach((log) => {
             const k = filterKey(log);
-            if (k !== SYSTEM && !list.some((f) => f.id === k)) list.push({ id: k, label: splitTitle(log.title)[0] });
+            if (k !== SYSTEM && !list.some((f) => f.id === k))
+                list.push({ id: k, label: splitTitle(log.title)[0] });
         });
         list.push({ id: SYSTEM, label: "システム" });
         return list;
@@ -146,11 +176,21 @@
         (filter === "core-world-join-id" && !!head?.wid);
     $: visible = sessions
         .map((s) => {
-            let rows = filter === ALL ? s.rows : s.rows.filter((r) => filterKey(r.log) === filter);
+            let rows =
+                filter === ALL
+                    ? s.rows
+                    : s.rows.filter((r) => filterKey(r.log) === filter);
             rows = rows.filter(matches);
-            const headHit = !!s.head && headMatchesFilter(s.head) && matches(s.head);
-            const show = filter === ALL && !query ? true : rows.length > 0 || headHit;
-            return { head: s.head, allRows: s.rows, rows: rows.slice().reverse(), show };
+            const headHit =
+                !!s.head && headMatchesFilter(s.head) && matches(s.head);
+            const show =
+                filter === ALL && !query ? true : rows.length > 0 || headHit;
+            return {
+                head: s.head,
+                allRows: s.rows,
+                rows: rows.slice().reverse(),
+                show,
+            };
         })
         .filter((s) => s.show && (s.head || s.rows.length))
         .reverse();
@@ -188,7 +228,10 @@
         try {
             await OpenFileInExplorer(path);
         } catch (error) {
-            console.error("エクスプローラーで開けませんでした。ファイルを直接開きます:", error);
+            console.error(
+                "エクスプローラーで開けませんでした。ファイルを直接開きます:",
+                error,
+            );
             await openImage(path);
         }
     }
@@ -213,7 +256,8 @@
     }
 
     const baseName = (p: string) => p.split(/[\\/]/).pop();
-    const countKind = (rows: Entry[], kind: Kind) => rows.filter((r) => r.kind === kind).length;
+    const countKind = (rows: Entry[], kind: Kind) =>
+        rows.filter((r) => r.kind === kind).length;
 </script>
 
 {#if !hasFolder}
@@ -221,27 +265,44 @@
         <div class="box">
             <div class="big"><Icon name="folder" size={30} /></div>
             <h3>VRChatのログフォルダを選んでください</h3>
-            <p>いつもの場所にログが見つかりませんでした。VRChatを一度でも起動していれば、通常は次の場所にあります。</p>
+            <p>
+                いつもの場所にログが見つかりませんでした。VRChatを一度でも起動していれば、通常は次の場所にあります。
+            </p>
             <code>C:\Users\（ユーザー名）\AppData\LocalLow\VRChat\VRChat</code>
-            <button class="btn pri" on:click={onPickFolder}><Icon name="folder" />フォルダを選択</button>
+            <button class="btn pri" on:click={onPickFolder}
+                ><Icon name="folder" />フォルダを選択</button
+            >
             <p class="hint">あとから「アプリ設定」でも変更できます。</p>
         </div>
     </div>
 {:else}
     <div class="fbar">
         <div class="chips">
-            <button class="chip" aria-pressed={filter === ALL} on:click={() => (filter = ALL)}>
+            <button
+                class="chip"
+                aria-pressed={filter === ALL}
+                on:click={() => (filter = ALL)}
+            >
                 すべて<span class="n">{noticeLogs.length}</span>
             </button>
             {#each filters as f (f.id)}
-                <button class="chip" aria-pressed={filter === f.id} on:click={() => (filter = f.id)}>
+                <button
+                    class="chip"
+                    aria-pressed={filter === f.id}
+                    on:click={() => (filter = f.id)}
+                >
                     {f.label}<span class="n">{counts[f.id] ?? 0}</span>
                 </button>
             {/each}
         </div>
         <label class="search">
             <Icon name="search" />
-            <input type="search" placeholder="名前やURLで探す" bind:value={query} aria-label="ログを検索" />
+            <input
+                type="search"
+                placeholder="検索"
+                bind:value={query}
+                aria-label="ログを検索"
+            />
         </label>
     </div>
 
@@ -254,22 +315,55 @@
                         <span class="wico"><Icon name="globe" /></span>
                         <div class="wt">
                             <b>{head.log.metaData}</b>
-                            <small>{head.time ? `${head.time} に入室` : "入室"}{head.wid ? ` · ${head.wid}` : ""}</small>
+                            <small
+                                >{head.time
+                                    ? `${head.time} に入室`
+                                    : "入室"}{head.wid
+                                    ? ` · ${head.wid}`
+                                    : ""}</small
+                            >
                         </div>
-                        <span class="stats">入室 {countKind(s.allRows, "join")} · 退室 {countKind(s.allRows, "leave")}</span>
+                        <span class="stats"
+                            >入室 {countKind(s.allRows, "join")} · 退室 {countKind(
+                                s.allRows,
+                                "leave",
+                            )}</span
+                        >
                         {#if head.delivered}
-                            <span class="dlv" class:ng={!head.ok} title={head.log.text}>
-                                <Icon name={CHANNELS[head.channel].icon} size={12} />{CHANNELS[head.channel].label}
-                                <Icon name={head.ok ? "check" : "x"} size={12} />
+                            <span
+                                class="dlv"
+                                class:ng={!head.ok}
+                                title={head.log.text}
+                            >
+                                <Icon
+                                    name={CHANNELS[head.channel].icon}
+                                    size={12}
+                                />{CHANNELS[head.channel].label}
+                                <Icon
+                                    name={head.ok ? "check" : "x"}
+                                    size={12}
+                                />
                             </span>
                         {/if}
                         <div class="acts show">
                             {#if head.wid}
-                                <button class="ib" title="ワールドのページを開く" on:click={() => BrowserOpenURL(`https://vrchat.com/home/world/${head.wid}`)}>
+                                <button
+                                    class="ib"
+                                    title="ワールドのページを開く"
+                                    on:click={() =>
+                                        BrowserOpenURL(
+                                            `https://vrchat.com/home/world/${head.wid}`,
+                                        )}
+                                >
                                     <Icon name="ext" />
                                 </button>
                             {/if}
-                            <button class="ib" title="ワールド名をコピー" on:click={() => copy(head.log.metaData)}><Icon name="copy" /></button>
+                            <button
+                                class="ib"
+                                title="ワールド名をコピー"
+                                on:click={() => copy(head.log.metaData)}
+                                ><Icon name="copy" /></button
+                            >
                         </div>
                     </header>
                 {/if}
@@ -278,9 +372,18 @@
                     <div class="rows">
                         {#each s.rows as e (e.key)}
                             {@const log = e.log}
-                            <div class="row k-{e.kind}" class:failed={!e.ok} in:fly|local={{ y: -6, duration: 220 }}>
+                            <div
+                                class="row k-{e.kind}"
+                                class:failed={!e.ok}
+                                in:fly|local={{ y: -6, duration: 220 }}
+                            >
                                 <time>{e.time}</time>
-                                <span class="kind"><Icon name={KIND_ICON[e.kind]} size={14} /></span>
+                                <span class="kind"
+                                    ><Icon
+                                        name={KIND_ICON[e.kind]}
+                                        size={14}
+                                    /></span
+                                >
                                 <div class="msg">
                                     {#if e.kind === "join"}
                                         <b>{log.metaData}</b> が入室しました
@@ -288,48 +391,118 @@
                                         <b>{log.metaData}</b> が退室しました
                                     {:else if e.kind === "shot"}
                                         スクリーンショットを撮影しました
-                                        <span class="sub val">{baseName(log.metaData)}</span>
+                                        <span class="sub val"
+                                            >{baseName(log.metaData)}</span
+                                        >
                                         {#await getThumbnail(log.metaData) then src}
                                             {#if src}
-                                                <button class="thumb" title="クリックで画像を開く" on:click={() => openImage(log.metaData)}>
-                                                    <img {src} alt="スクリーンショット" />
+                                                <button
+                                                    class="thumb"
+                                                    title="クリックで画像を開く"
+                                                    on:click={() =>
+                                                        openImage(log.metaData)}
+                                                >
+                                                    <img
+                                                        {src}
+                                                        alt="スクリーンショット"
+                                                    />
                                                 </button>
                                             {/if}
                                         {/await}
                                     {:else if e.kind === "file"}
-                                        <span class="rl">{e.ruleTitle}</span>「{log.metaData}」をファイルに書き出しました
+                                        <span class="rl">{e.ruleTitle}</span
+                                        >「{log.metaData}」をファイルに書き出しました
                                     {:else if e.kind === "custom"}
-                                        <span class="rl">{e.ruleTitle}</span><span class="val">{log.metaData}</span>
+                                        <span class="rl">{e.ruleTitle}</span
+                                        ><span class="val">{log.metaData}</span>
                                     {:else}
                                         {log.text}
                                     {/if}
                                     {#if !e.ok}
                                         <span class="sub err">
                                             {log.text}
-                                            {#if log.settingId}<button class="link" on:click={() => onOpenRule(log.settingId)}>ルールを確認</button>{/if}
+                                            {#if log.settingId}<button
+                                                    class="link"
+                                                    on:click={() =>
+                                                        onOpenRule(
+                                                            log.settingId,
+                                                        )}>ルールを確認</button
+                                                >{/if}
                                         </span>
                                     {/if}
                                 </div>
                                 <div class="right">
                                     {#if e.delivered && e.kind !== "file"}
-                                        <span class="dlv" class:ng={!e.ok} title={log.text}>
-                                            <Icon name={CHANNELS[e.channel].icon} size={12} />{CHANNELS[e.channel].label}
-                                            <Icon name={e.ok ? "check" : "x"} size={12} />
+                                        <span
+                                            class="dlv"
+                                            class:ng={!e.ok}
+                                            title={log.text}
+                                        >
+                                            <Icon
+                                                name={CHANNELS[e.channel].icon}
+                                                size={12}
+                                            />{CHANNELS[e.channel].label}
+                                            <Icon
+                                                name={e.ok ? "check" : "x"}
+                                                size={12}
+                                            />
                                         </span>
                                     {/if}
                                     <div class="acts">
                                         {#if log.canCopy && log.metaData}
                                             {#if isURL(log.metaData)}
-                                                <button class="ib" title="ブラウザで開く" on:click={() => BrowserOpenURL(log.metaData)}><Icon name="ext" /></button>
+                                                <button
+                                                    class="ib"
+                                                    title="ブラウザで開く"
+                                                    on:click={() =>
+                                                        BrowserOpenURL(
+                                                            log.metaData,
+                                                        )}
+                                                    ><Icon name="ext" /></button
+                                                >
                                             {/if}
                                             {#if e.kind === "shot"}
-                                                <button class="ib" title="画像を開く" on:click={() => openImage(log.metaData)}><Icon name="image" /></button>
-                                                <button class="ib" title="フォルダで表示" on:click={() => showInExplorer(log.metaData)}><Icon name="folder" /></button>
+                                                <button
+                                                    class="ib"
+                                                    title="画像を開く"
+                                                    on:click={() =>
+                                                        openImage(log.metaData)}
+                                                    ><Icon
+                                                        name="image"
+                                                    /></button
+                                                >
+                                                <button
+                                                    class="ib"
+                                                    title="フォルダで表示"
+                                                    on:click={() =>
+                                                        showInExplorer(
+                                                            log.metaData,
+                                                        )}
+                                                    ><Icon
+                                                        name="folder"
+                                                    /></button
+                                                >
                                             {/if}
                                             {#if e.kind === "file"}
-                                                <button class="ib" title="出力フォルダを開く" on:click={() => openOutputFolder(log.settingId)}><Icon name="folder" /></button>
+                                                <button
+                                                    class="ib"
+                                                    title="出力フォルダを開く"
+                                                    on:click={() =>
+                                                        openOutputFolder(
+                                                            log.settingId,
+                                                        )}
+                                                    ><Icon
+                                                        name="folder"
+                                                    /></button
+                                                >
                                             {/if}
-                                            <button class="ib" title="コピー" on:click={() => copy(log.metaData)}><Icon name="copy" /></button>
+                                            <button
+                                                class="ib"
+                                                title="コピー"
+                                                on:click={() =>
+                                                    copy(log.metaData)}
+                                                ><Icon name="copy" /></button
+                                            >
                                         {/if}
                                     </div>
                                 </div>
@@ -346,7 +519,9 @@
                 {:else}
                     <Icon name="search" size={28} />
                     <span>条件に合うログはありません</span>
-                    <button class="btn sm" on:click={clearFilters}>絞り込みを解除</button>
+                    <button class="btn sm" on:click={clearFilters}
+                        >絞り込みを解除</button
+                    >
                 {/if}
             </div>
         {/each}
