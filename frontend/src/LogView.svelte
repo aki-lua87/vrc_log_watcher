@@ -155,6 +155,9 @@
         return list;
     })();
     // ワールド入室のルールは見出し側に表示されるので、見出しで絞り込む
+    // ワールド名の帯を絞り込みバーのすぐ下に固定するため、バーの高さを使う
+    let fbarHeight = 0;
+
     const headMatchesFilter = (head: Session["head"]) =>
         filter === ALL || filter === "core-world-join-name" || (filter === "core-world-join-id" && !!head?.wid);
     $: visible = sessions
@@ -165,6 +168,7 @@
             const show = filter === ALL && !query ? true : rows.length > 0 || headHit;
             return {
                 head: s.head,
+                headHit,
                 allRows: s.rows,
                 rows: rows.slice().reverse(),
                 show,
@@ -245,7 +249,7 @@
         </div>
     </div>
 {:else}
-    <div class="fbar">
+    <div class="fbar" bind:clientHeight={fbarHeight}>
         <div class="chips">
             <button class="chip" aria-pressed={filter === ALL} on:click={() => (filter = ALL)}>
                 すべて<span class="n">{noticeLogs.length}</span>
@@ -264,26 +268,16 @@
 
     <div class="feed">
         {#each visible as s (s.head ? s.head.key : -1)}
-            <section>
+            <!-- ワールドごとに枠で囲み、上の帯でどのワールドかを示す。入室そのものは時刻どおり枠の一番下に置く -->
+            <section class:world={!!s.head}>
                 {#if s.head}
                     {@const head = s.head}
-                    <header class="sess-h">
-                        <span class="wico"><Icon name="globe" /></span>
-                        <div class="wt">
-                            <b>{head.log.metaData}</b>
-                            <small
-                                >{head.time ? `${head.time} に入室` : "入室"}{head.wid ? ` · ${head.wid}` : ""}</small
-                            >
-                        </div>
-                        <span class="stats"
-                            >入室 {countKind(s.allRows, "join")} · 退室 {countKind(s.allRows, "leave")}</span
-                        >
-                        {#if head.delivered}
-                            <span class="dlv" class:ng={!head.ok} title={head.log.text}>
-                                <Icon name={CHANNELS[head.channel].icon} size={12} />{CHANNELS[head.channel].label}
-                                <Icon name={head.ok ? "check" : "x"} size={12} />
-                            </span>
-                        {/if}
+                    <header class="sess-h" style="top: {fbarHeight}px">
+                        <Icon name="globe" size={14} />
+                        <b class="wname">{head.log.metaData}</b>
+                        <span class="stats">
+                            入室 {countKind(s.allRows, "join")} · 退室 {countKind(s.allRows, "leave")}
+                        </span>
                         <div class="acts show">
                             {#if head.wid}
                                 <button
@@ -402,6 +396,35 @@
                         {/each}
                     </div>
                 {/if}
+
+                {#if s.head && s.headHit}
+                    {@const head = s.head}
+                    <div class="rows">
+                        <div class="row k-world" class:failed={!head.ok}>
+                            <time>{head.time}</time>
+                            <span class="kind"><Icon name="globe" size={14} /></span>
+                            <div class="msg">
+                                <b>{head.log.metaData}</b>
+                                に入室しました
+                                {#if head.wid}
+                                    <span class="sub val">{head.wid}</span>
+                                {/if}
+                                {#if !head.ok}
+                                    <span class="sub err">{head.log.text}</span>
+                                {/if}
+                            </div>
+                            <div class="right">
+                                {#if head.delivered}
+                                    <span class="dlv" class:ng={!head.ok} title={head.log.text}>
+                                        <Icon name={CHANNELS[head.channel].icon} size={12} />
+                                        {CHANNELS[head.channel].label}
+                                        <Icon name={head.ok ? "check" : "x"} size={12} />
+                                    </span>
+                                {/if}
+                            </div>
+                        </div>
+                    </div>
+                {/if}
             </section>
         {:else}
             <div class="empty">
@@ -507,47 +530,50 @@
         gap: 20px;
         max-width: 1000px;
     }
-    .sess-h {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 10px 12px;
+    /* ワールドの枠 */
+    .world {
         background: var(--surface);
         border: 1px solid var(--line);
         border-radius: var(--radius);
-        flex-wrap: wrap;
+        padding: 0 6px 6px;
     }
-    :global(:root[data-theme="red"]) .sess-h {
+    :global(:root[data-theme="red"]) .world {
         border-left: 3px solid var(--accent);
     }
-    .wico {
-        width: 34px;
-        height: 34px;
-        border-radius: var(--radius-s);
-        background: var(--accent-soft);
+    /* 枠の上の帯。スクロールしても絞り込みバーの下に残る */
+    .sess-h {
+        position: sticky;
+        z-index: 4;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 -6px;
+        padding: 6px 12px 6px 18px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--line);
+        border-radius: var(--radius) var(--radius) 0 0;
         color: var(--accent);
-        display: grid;
-        place-items: center;
-        flex: none;
-        clip-path: var(--cut);
     }
-    .wt {
+    .wname {
+        flex: 1 1 auto;
         min-width: 0;
-        flex: 1 1 200px;
-    }
-    .wt b {
-        font-size: 14.5px;
+        color: var(--fg);
+        font-size: 13.5px;
         font-weight: 600;
-        display: block;
         font-family: var(--font-display);
-        overflow-wrap: anywhere;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
-    .wt small {
-        color: var(--faint);
-        font-family: var(--font-data);
-        font-size: 11px;
-        overflow-wrap: anywhere;
-        display: block;
+    .world .rows {
+        margin-top: 4px;
+    }
+    .world .rows + .rows {
+        margin-top: 0;
+    }
+    .k-world .kind {
+        color: var(--accent);
+        background: var(--accent-soft);
     }
     .stats {
         font-size: 12px;
