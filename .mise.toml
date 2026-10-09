@@ -26,3 +26,18 @@ run = "wails doctor"
 [tasks.version]
 description = "Show Wails version"
 run = "wails version"
+
+[tasks.fmt]
+description = "Format frontend (Biome) and Go (gofmt)"
+run = [
+  "pnpm --dir frontend run format",
+  "gofmt -w main.go app.go internal",
+]
+
+[tasks.lint]
+description = "Check format and lint (Biome, svelte-check, gofmt, go vet)"
+run = [
+  "pnpm --dir frontend run lint",
+  "gofmt -l main.go app.go internal",
+  "go vet ./...",
+]

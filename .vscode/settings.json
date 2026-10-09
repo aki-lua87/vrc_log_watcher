@@ -1,0 +1,15 @@
+{
+    // フロントエンドは Biome（設定は biome.jsonc）、Go は gofmt で保存時に整形する
+    "editor.formatOnSave": true,
+    "[svelte][typescript][javascript][json][jsonc][css][html]": {
+        "editor.defaultFormatter": "biomejs.biome",
+        "editor.codeActionsOnSave": {
+            "source.fixAll.biome": "explicit",
+            "source.organizeImports.biome": "explicit"
+        }
+    },
+    "[go]": {
+        "editor.defaultFormatter": "golang.go"
+    },
+    "files.eol": "\n"
+}

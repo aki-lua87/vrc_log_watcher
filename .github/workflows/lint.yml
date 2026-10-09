@@ -1,0 +1,67 @@
+name: Lint
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    # Wails のコードが Windows 向けなので、go vet もビルドと同じ Windows で動かす
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Biome (format / lint)
+        working-directory: frontend
+        run: pnpm exec biome ci --reporter=github .
+
+      - name: svelte-check
+        working-directory: frontend
+        run: pnpm run check
+
+      - name: gofmt
+        run: |
+          unformatted=$(git ls-files '*.go' | xargs gofmt -l)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt で整形されていないファイルがあります:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      # main.go が frontend/dist を埋め込むため、先にフロントエンドをビルドする
+      - name: Build frontend
+        working-directory: frontend
+        run: pnpm run build
+
+      - name: go vet
+        run: go vet ./...

@@ -1,0 +1,8 @@
+# 改行コードは常に LF でチェックアウトする
+# （GitHub Actions の Windows ランナーは core.autocrlf=true のため、指定しないと CRLF になり Biome のチェックが失敗する）
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
+*.exe binary
+*.woff2 binary

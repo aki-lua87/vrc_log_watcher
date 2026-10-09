@@ -67,6 +67,8 @@ export namespace models {
 	    type: string;
 	    start: string;
 	    end: string;
+	    prefix: string;
+	    keyword: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SimpleBlock(source);
@@ -77,6 +79,8 @@ export namespace models {
 	        this.type = source["type"];
 	        this.start = source["start"];
 	        this.end = source["end"];
+	        this.prefix = source["prefix"];
+	        this.keyword = source["keyword"];
 	    }
 	}
 	export class Setting {
@@ -138,6 +142,7 @@ export namespace models {
 	export class SaveData {
 	    path: string;
 	    settings: Setting[];
+	    theme: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new SaveData(source);
@@ -147,6 +152,7 @@ export namespace models {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
 	        this.settings = this.convertValues(source["settings"], Setting);
+	        this.theme = source["theme"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

@@ -50,7 +50,7 @@ func (c *XSOverlayClient) Post(eventString string, title string) string {
 	port := "42070"
 
 	apiObject := &models.XSOApiObject{
-		Sender:   "VRCLogWatcher",
+		Sender:   "VRCLogBridge",
 		Target:   "XSOverlay",
 		Command:  "SendNotification",
 		JsonData: string(notificationJSON),
@@ -58,7 +58,7 @@ func (c *XSOverlayClient) Post(eventString string, title string) string {
 
 	if c.ws == nil {
 		log.Default().Println("[DEBUG] [LOG] a.xsWS != nil")
-		ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogWatcher", nil)
+		ws, _, err := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogBridge", nil)
 		if err != nil {
 			c.ws = nil
 			return err.Error()
@@ -69,7 +69,7 @@ func (c *XSOverlayClient) Post(eventString string, title string) string {
 	if err := c.ws.WriteJSON(apiObject); err != nil {
 		c.ws.Close()
 		// リトライ
-		rws, _, errr1 := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogWatcher", nil)
+		rws, _, errr1 := websocket.DefaultDialer.Dial("ws://"+url+":"+port+"/?client=VRCLogBridge", nil)
 		if errr1 != nil {
 			c.ws = nil
 			return errr1.Error()
