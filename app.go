@@ -194,8 +194,9 @@ func (a *App) GetNewestFileName(path string) string {
 	}
 
 	if isNew {
-		a.ReadFile()
+		// 起動前に入室していたワールドがこのお知らせの後ろ（同じワールドの枠）に並ぶよう、先に出す
 		a.SendNoticeLog("ログファイル名: "+name, "", "[SYSTEM]", false)
+		a.ReadFile()
 	}
 
 	return name
@@ -208,6 +209,12 @@ func (a *App) ResetOffset() {
 func (a *App) ReadFile() {
 	results := a.watcher.ReadFile(a.SaveData.LogPath, a.SaveData.Settings)
 	for _, result := range results {
+		// 起動前のログから拾ったものは、今さら通知を送らず画面に出すだけにする
+		if result.Initial {
+			message := "[起動前の入室] " + result.Setting.Title + ": " + result.Text
+			a.sendNoticeLog(message, result.Text, result.Setting.Title+": 起動前の入室", result.Setting.ID, true, result.LogTime)
+			continue
+		}
 		dispatchResult := a.dispatcher.Send(result.Text, result.Setting, result.IsScreenshot, result.LogTime, result.LogFile)
 		if dispatchResult.Label != "" {
 			a.sendNoticeLog(dispatchResult.Message, result.Text, dispatchResult.Label, result.Setting.ID, true, result.LogTime)
