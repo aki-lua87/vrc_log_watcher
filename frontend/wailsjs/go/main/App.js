@@ -18,6 +18,10 @@ export function GetOutputFolderPath(arg1) {
   return window['go']['main']['App']['GetOutputFolderPath'](arg1);
 }
 
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
+}
+
 export function GetWatcherDebugInfo() {
   return window['go']['main']['App']['GetWatcherDebugInfo']();
 }

@@ -2,6 +2,7 @@
     import { fly } from "svelte/transition";
     import {
         GetNewestFileName,
+        GetVersion,
         LoadNoticeLog,
         LoadSetting,
         OpenFolderSelectWindow,
@@ -32,6 +33,8 @@
     let saveData: models.SaveData;
     let loaded = false;
     let theme: ThemeId = "light";
+    let version = "";
+    GetVersion().then((v) => (version = v));
 
     let contents: models.Setting[] = [];
     let noticeLogs: models.NoticeLog[] = [];
@@ -195,6 +198,9 @@
                 {/if}
             </button>
         {/each}
+        {#if version}
+            <div class="ver" title="アプリのバージョン">{version}</div>
+        {/if}
     </aside>
 
     <section class="main">
@@ -302,6 +308,14 @@
         background: linear-gradient(90deg, var(--accent-soft), transparent);
         box-shadow: inset 3px 0 0 var(--accent);
         color: var(--fg);
+    }
+    .ver {
+        margin-top: auto;
+        padding: 8px 10px 0;
+        font-size: 11px;
+        font-family: var(--font-data);
+        color: var(--faint);
+        user-select: text;
     }
     .count {
         margin-left: auto;

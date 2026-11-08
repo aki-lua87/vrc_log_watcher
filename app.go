@@ -37,6 +37,11 @@ func NewApp() *App {
 	return &App{}
 }
 
+// GetVersion アプリのバージョン（開発中は "dev"）
+func (a *App) GetVersion() string {
+	return version
+}
+
 // applog.Logger インターフェースの実装
 func (a *App) Log(msg string) {
 	logMsg := "[DEBUG] [LOG] OutputLog:" + msg

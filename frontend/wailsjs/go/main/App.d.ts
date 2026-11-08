@@ -11,6 +11,8 @@ export function GetNewestFileName(arg1:string):Promise<string>;
 
 export function GetOutputFolderPath(arg1:string):Promise<string>;
 
+export function GetVersion():Promise<string>;
+
 export function GetWatcherDebugInfo():Promise<logwatcher.DebugInfo>;
 
 export function LoadNoticeLog():Promise<models.NoticeLog>;
