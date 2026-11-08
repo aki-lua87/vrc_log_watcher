@@ -69,6 +69,8 @@ type MatchResult struct {
 	IsScreenshot bool
 	LogTime      string
 	LogFile      string
+	// Initial 起動時に読み飛ばした既存ログから拾った結果（画面表示のみで、通知は送らない）
+	Initial bool
 }
 
 // GetNewestFileName フォルダ内の最新のtxtファイルを探索
@@ -190,16 +192,19 @@ func (w *Watcher) ReadFile(logPath string, settings []models.Setting) []MatchRes
 	isFirstRead := currentOffset == 0
 
 	// 初回読み込み: 既存ログを読み飛ばしてオフセットをファイル末尾に設定
+	// 起動前に入室していたワールドだけは画面に出せるよう、最後のワールド入室（名前・ID）を拾っておく
 	if isFirstRead {
 		scanner := bufio.NewScanner(file)
 		scanner.Buffer(make([]byte, 1000000), 1000000)
 		var lastLine string
 		linesRead := 0
+		world := newLastWorldTracker(settings)
 		for scanner.Scan() {
 			line := scanner.Text()
 			lastLine = line
 			linesRead++
 			w.extractTimeFromVRCLog(line)
+			world.feed(line, w.LastLogTime)
 		}
 		if err := scanner.Err(); err != nil {
 			w.Logger.LogError(err, "初期読み込みスキャン")
@@ -210,7 +215,11 @@ func (w *Watcher) ReadFile(logPath string, settings []models.Setting) []MatchRes
 		w.consecutiveNoProgress = 0
 		w.mu.Unlock()
 		w.updateDebugInfo(lastLine, linesRead, fileSize, fileSize)
-		return nil
+		results := world.results()
+		for i := range results {
+			results[i].LogFile = targetFile
+		}
+		return results
 	}
 
 	// 増分読み取り: lastOffset 以降の新しいデータを直接読み取る

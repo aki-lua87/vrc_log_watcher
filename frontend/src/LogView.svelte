@@ -99,7 +99,8 @@
         };
     }
 
-    // ワールド入室ごとに区切る。ワールドIDは入室ログ（Entering Room）の直前に出るので次の見出しに付ける
+    // ワールド入室ごとに区切る。VRChat はワールドIDを入室ログ（Entering Room）の直後に出すので、
+    // まだIDのない今の見出しに付ける。IDが先に来た場合（今の見出しにIDがある）は次の見出しに回す
     function buildSessions(logs: models.NoticeLog[]): Session[] {
         const sessions: Session[] = [{ head: null, rows: [] }];
         let pendingWid = "";
@@ -107,7 +108,8 @@
             const e = classify(log, i);
             const cur = sessions[sessions.length - 1];
             if (e.kind === "worldid") {
-                pendingWid = log.metaData;
+                if (cur.head && !cur.head.wid) cur.head.wid = log.metaData;
+                else pendingWid = log.metaData;
             } else if (e.kind === "world") {
                 sessions.push({ head: { ...e, wid: pendingWid }, rows: [] });
                 pendingWid = "";
