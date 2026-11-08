@@ -11,6 +11,9 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// version アプリのバージョン。リリースビルドでは -ldflags "-X main.version=v3.0.3" のようにタグ名を埋め込む
+var version = "dev"
+
 func main() {
 	// Create an instance of the app structure
 	app := NewApp()
