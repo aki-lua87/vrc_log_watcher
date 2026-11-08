@@ -36,10 +36,14 @@ type Watcher struct {
 	TargetFileName string
 	LastLogTime    string
 	lastOffset     int64
-	isRunning      bool
-	mu             sync.Mutex
-	Logger         applog.Logger
-	Debug          DebugInfo
+	// readFromStart 監視中に新しいログファイルへ切り替わったとき、既存行を読み飛ばさず先頭から読む
+	// （起動時やログフォルダを変えたときは、古いワールドなどを出さないよう読み飛ばす）
+	readFromStart bool
+	logPath       string
+	isRunning     bool
+	mu            sync.Mutex
+	Logger        applog.Logger
+	Debug         DebugInfo
 
 	lastNewLinesAt        time.Time
 	consecutiveNoProgress int
@@ -54,6 +58,7 @@ func NewWatcher(logger applog.Logger) *Watcher {
 // ResetOffset 読み取りオフセットをリセット
 func (w *Watcher) ResetOffset() {
 	w.lastOffset = 0
+	w.readFromStart = false
 	w.consecutiveNoProgress = 0
 }
 
@@ -69,8 +74,6 @@ type MatchResult struct {
 	IsScreenshot bool
 	LogTime      string
 	LogFile      string
-	// Initial 起動時に読み飛ばした既存ログから拾った結果（画面表示のみで、通知は送らない）
-	Initial bool
 }
 
 // GetNewestFileName フォルダ内の最新のtxtファイルを探索
@@ -124,6 +127,10 @@ func (w *Watcher) GetNewestFileName(logPath string) (string, bool) {
 	}
 
 	log.Default().Println("[DEBUG] [LOG] 監視対象を変更します")
+	// 同じフォルダで前のファイルを監視していた（＝起動時でもフォルダ変更でもない）なら、
+	// VRChat が新しく作ったファイルなので先頭から読む
+	w.readFromStart = w.TargetFileName != "" && w.logPath == logPath
+	w.logPath = logPath
 	w.TargetFileName = newestFile.Name()
 	w.lastOffset = 0
 	w.consecutiveNoProgress = 0
@@ -151,6 +158,7 @@ func (w *Watcher) ReadFile(logPath string, settings []models.Setting) []MatchRes
 	w.isRunning = true
 	currentOffset := w.lastOffset
 	targetFile := w.TargetFileName
+	readFromStart := w.readFromStart
 	w.mu.Unlock()
 
 	defer func() {
@@ -189,22 +197,19 @@ func (w *Watcher) ReadFile(logPath string, settings []models.Setting) []MatchRes
 		return nil
 	}
 
-	isFirstRead := currentOffset == 0
+	isFirstRead := currentOffset == 0 && !readFromStart
 
 	// 初回読み込み: 既存ログを読み飛ばしてオフセットをファイル末尾に設定
-	// 起動前に入室していたワールドだけは画面に出せるよう、最後のワールド入室（名前・ID）を拾っておく
 	if isFirstRead {
 		scanner := bufio.NewScanner(file)
 		scanner.Buffer(make([]byte, 1000000), 1000000)
 		var lastLine string
 		linesRead := 0
-		world := newLastWorldTracker(settings)
 		for scanner.Scan() {
 			line := scanner.Text()
 			lastLine = line
 			linesRead++
 			w.extractTimeFromVRCLog(line)
-			world.feed(line, w.LastLogTime)
 		}
 		if err := scanner.Err(); err != nil {
 			w.Logger.LogError(err, "初期読み込みスキャン")
@@ -215,11 +220,7 @@ func (w *Watcher) ReadFile(logPath string, settings []models.Setting) []MatchRes
 		w.consecutiveNoProgress = 0
 		w.mu.Unlock()
 		w.updateDebugInfo(lastLine, linesRead, fileSize, fileSize)
-		results := world.results()
-		for i := range results {
-			results[i].LogFile = targetFile
-		}
-		return results
+		return nil
 	}
 
 	// 増分読み取り: lastOffset 以降の新しいデータを直接読み取る
@@ -271,6 +272,7 @@ func (w *Watcher) ReadFile(logPath string, settings []models.Setting) []MatchRes
 	w.mu.Lock()
 	if w.TargetFileName == targetFile {
 		w.lastOffset = newOffset
+		w.readFromStart = false
 	}
 	if linesRead > 0 {
 		w.lastNewLinesAt = time.Now()
